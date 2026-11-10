@@ -13,10 +13,17 @@ from ..core.errors import AppError
 from ..models import registry
 from ..models.upscaler import hardware_info
 from ..pipelines import enhance
-from ..services import analysis, faces, image_io
+from ..services import analysis, face_restore, faces, image_io
 from ..services.store import get_store
 
 router = APIRouter(prefix="/api")
+
+
+class FaceBox(BaseModel):
+    x: float
+    y: float
+    w: float
+    h: float
 
 
 class JobRequest(BaseModel):
@@ -28,11 +35,21 @@ class JobRequest(BaseModel):
     upscale: bool = True
     target: Literal["original", "1080p", "2k", "4k"] = "original"
     scale: float = Field(2.0, ge=1, le=4)
+    faces: bool = False
+    face_strength: float = Field(0.7, ge=0, le=1)
+    skin: bool = False
+    skin_smooth: float = Field(0.35, ge=0, le=1)
+    skin_wrinkles: float = Field(0.35, ge=0, le=1)
+    keep_texture: bool = True
+    exclude_faces: list[FaceBox] = Field(default_factory=list, max_length=64)
 
     def to_options(self) -> enhance.Options:
         return enhance.Options(
             intensity=self.intensity, denoise=self.denoise, color=self.color, sharpen=self.sharpen,
             upscale=self.upscale, target=self.target, scale=self.scale,
+            faces=self.faces, face_strength=self.face_strength, skin=self.skin,
+            skin_smooth=self.skin_smooth, skin_wrinkles=self.skin_wrinkles, keep_texture=self.keep_texture,
+            exclude_faces=tuple((b.x, b.y, b.w, b.h) for b in self.exclude_faces),
         )
 
 
@@ -64,7 +81,7 @@ def system():
         "models": [registry.model_status(k) for k in registry.MODELS],
         "privacy": {"local_only": True, "telemetry": False, "host": settings.host},
         "features": {"upscale": registry.model_path("realesr-general-x4v3").is_file(), "face_detection": True,
-                     "face_restoration": False, "skin_retouch": False, "inpainting": False},
+                     "face_restoration": face_restore.available(), "skin_retouch": True, "inpainting": False},
     }
 
 
@@ -117,6 +134,8 @@ def plan(req: JobRequest):
 
 @router.post("/jobs", status_code=202)
 def create_job(req: JobRequest):
+    if req.faces and not face_restore.available():
+        raise AppError("Faltan los modelos de rostros. Ejecuta scripts/descargar_modelos.sh.", 503, "model_missing")
     if req.upscale and not registry.model_path("realesr-general-x4v3").is_file():
         raise AppError("Falta el modelo de superresolución. Ejecuta scripts/descargar_modelos.sh.", 503, "model_missing")
     job = get_store().create_job(req.image_id, req.to_options(), req.model_dump())

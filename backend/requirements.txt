@@ -1,5 +1,6 @@
 # Dependencias del motor local (versiones fijadas y probadas con Python 3.13).
 # PyTorch se instala aparte (ver scripts/instalar.sh) para elegir CPU o CUDA.
+# facexlib==0.3.0 y torchvision==0.29.2 se instalan aparte en scripts/instalar.sh (facexlib con --no-deps).
 fastapi==0.162.4
 numpy==2.5.4
 opencv-python-headless==4.11.0.86
@@ -10,3 +11,4 @@ scikit-image==0.26.0
 scipy==1.18.1
 starlette==1.10.0
 uvicorn==0.54.0
+qrcode==8.2

@@ -19,21 +19,22 @@ export default function Editor({ info, system, onBack }: { info: ImageInfo; syst
   const [exportMsg, setExportMsg] = useState<string | null>(null);
   const abort = useRef<AbortController | null>(null);
   const srAvailable = system?.features.upscale ?? false;
+  const faceAvailable = system?.features.face_restoration ?? false;
   const cur = idx >= 0 ? versions[idx] : null;
 
   useEffect(() => {
     const t = setTimeout(() => {
-      api.plan(toOptions(info.id, { ...settings, upscale: settings.upscale && srAvailable }))
+      api.plan(toOptions(info.id, { ...settings, upscale: settings.upscale && srAvailable, faces: settings.faces && faceAvailable }, info.faces))
         .then((p) => { setPlan(p); setPlanError(null); }).catch((e: Error) => { setPlan(null); setPlanError(e.message); });
     }, 150);
     return () => clearTimeout(t);
-  }, [settings, info.id, srAvailable]);
+  }, [settings, info, srAvailable, faceAvailable]);
 
   const run = useCallback(async () => {
     setError(null); setExportMsg(null);
     abort.current = new AbortController();
     try {
-      const job = await api.createJob(toOptions(info.id, { ...settings, upscale: settings.upscale && srAvailable }));
+      const job = await api.createJob(toOptions(info.id, { ...settings, upscale: settings.upscale && srAvailable, faces: settings.faces && faceAvailable }, info.faces));
       setRunning(job);
       const done = await api.wait(job.id, setRunning, abort.current.signal);
       if (done.status === "done") {
@@ -41,7 +42,7 @@ export default function Editor({ info, system, onBack }: { info: ImageInfo; syst
       } else if (done.status === "error") setError(done.error);
     } catch (e) { setError((e as Error).message); }
     finally { setRunning(null); }
-  }, [info.id, settings, srAvailable, idx]);
+  }, [info, settings, srAvailable, faceAvailable, idx]);
 
   const cancel = async () => { if (running) { abort.current?.abort(); await api.cancel(running.id).catch(() => undefined); } };
 
@@ -57,8 +58,8 @@ export default function Editor({ info, system, onBack }: { info: ImageInfo; syst
 
   const an = info.analysis;
   return (
-    <div className="grid h-full grid-cols-1 gap-4 p-4 lg:grid-cols-[1fr_340px]">
-      <div className="flex min-h-[55vh] flex-col gap-3">
+    <div className="grid grid-cols-1 gap-4 p-3 pb-[max(1rem,env(safe-area-inset-bottom))] lg:h-full lg:grid-cols-[1fr_340px] lg:p-4">
+      <div className="flex flex-col gap-3 lg:min-h-[55vh]">
         <div className="flex flex-wrap items-center gap-2">
           <button className="btn-ghost" onClick={onBack}>← Inicio</button>
           <span className="truncate text-sm text-ink-300">{info.name} · {info.width}×{info.height} · {info.format} · {fmtBytes(info.size)}</span>
@@ -66,7 +67,7 @@ export default function Editor({ info, system, onBack }: { info: ImageInfo; syst
           <button className="btn-ghost" disabled={idx < 0 || !!running} onClick={() => setIdx(idx - 1)} aria-label="Deshacer">↶ Deshacer</button>
           <button className="btn-ghost" disabled={idx >= versions.length - 1 || !!running} onClick={() => setIdx(idx + 1)} aria-label="Rehacer">↷ Rehacer</button>
         </div>
-        <div className="relative min-h-0 flex-1">
+        <div className="relative h-[58vh] min-h-0 lg:h-auto lg:flex-1">
           {cur ? <Compare before={api.imageUrl(info.id)} after={api.jobUrl(cur.job.id)} />
             : <div className="checker flex h-full items-center justify-center rounded-xl border border-ink-700"><img src={api.imageUrl(info.id)} alt="Fotografía original" className="max-h-full max-w-full object-contain" /></div>}
           {running && (
@@ -84,7 +85,7 @@ export default function Editor({ info, system, onBack }: { info: ImageInfo; syst
         {error && <p role="alert" className="rounded-lg border border-red-500/40 bg-red-500/10 p-3 text-sm text-red-200">{error}</p>}
       </div>
 
-      <aside className="card flex max-h-full flex-col gap-5 overflow-y-auto p-4" aria-label="Panel de herramientas">
+      <aside className="card flex flex-col gap-5 p-4 lg:max-h-full lg:overflow-y-auto" aria-label="Panel de herramientas">
         <section aria-labelledby="diag">
           <h2 id="diag" className="mb-2 text-sm font-semibold">Diagnóstico</h2>
           <div className="flex flex-wrap gap-1.5 text-xs">
@@ -93,7 +94,7 @@ export default function Editor({ info, system, onBack }: { info: ImageInfo; syst
           <ul className="label mt-2 list-disc space-y-1 pl-4">{an.recommendations.map((r) => <li key={r}>{r}</li>)}</ul>
         </section>
 
-        <Controls s={settings} set={setSettings} plan={plan} planError={planError} srAvailable={srAvailable} />
+        <Controls s={settings} set={setSettings} plan={plan} planError={planError} srAvailable={srAvailable} faceAvailable={faceAvailable} image={info} />
         <button className="btn" disabled={!!running || !!planError} onClick={run}>{running ? "Procesando…" : cur ? "Aplicar de nuevo" : "Mejorar imagen"}</button>
 
         <section className="space-y-3 border-t border-ink-700 pt-4" aria-labelledby="exp">

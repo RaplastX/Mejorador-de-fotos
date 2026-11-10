@@ -1,14 +1,19 @@
-import type { JobOptions, Plan } from "../services/api";
+import { api, type JobOptions, type Plan } from "../services/api";
+
+export interface FaceBox { x: number; y: number; w: number; h: number }
+export interface ImageRef { id: string; width: number; height: number; faces: FaceBox[] }
 
 export interface Settings {
   intensity: JobOptions["intensity"]; target: JobOptions["target"]; scale: number; upscale: boolean;
   denoise: number | null; color: number | null; sharpen: number | null;
+  skin: boolean; skinSmooth: number; skinWrinkles: number; keepTexture: boolean;
+  faces: boolean; faceStrength: number; excluded: number[]; // índices de rostros que NO se mejoran
 }
-export const defaultSettings: Settings = { intensity: "equilibrada", target: "original", scale: 2, upscale: true, denoise: null, color: null, sharpen: null };
-const PRESET: Record<Settings["intensity"], [number, number, number]> = { suave: [0.25, 0.35, 0.25], equilibrada: [0.5, 0.6, 0.5], intensa: [0.8, 0.85, 0.8] };
+export const defaultSettings: Settings = { intensity: "equilibrada", target: "original", scale: 2, upscale: true, denoise: null, color: null, sharpen: null, faces: false, faceStrength: 0.7, excluded: [], skin: false, skinSmooth: 0.35, skinWrinkles: 0.35, keepTexture: true };
+const PRESET: Record<Settings["intensity"], [number, number, number]> = { suave: [0.25, 0.25, 0.25], equilibrada: [0.5, 0.4, 0.5], intensa: [0.8, 0.75, 0.8] };
 
-export const toOptions = (id: string, s: Settings): JobOptions => ({
-  image_id: id, intensity: s.intensity, target: s.target, scale: s.scale, upscale: s.upscale,
+export const toOptions = (id: string, s: Settings, faces: FaceBox[] = []): JobOptions => ({
+  image_id: id, faces: s.faces, face_strength: s.faceStrength, skin: s.skin, skin_smooth: s.skinSmooth, skin_wrinkles: s.skinWrinkles, keep_texture: s.keepTexture, exclude_faces: s.excluded.map((i) => faces[i]).filter(Boolean), intensity: s.intensity, target: s.target, scale: s.scale, upscale: s.upscale,
   ...(s.denoise !== null && { denoise: s.denoise }), ...(s.color !== null && { color: s.color }), ...(s.sharpen !== null && { sharpen: s.sharpen }),
 });
 
@@ -21,9 +26,9 @@ function Slider({ label, value, onChange }: { label: string; value: number; onCh
   );
 }
 
-interface Props { s: Settings; set: (s: Settings) => void; plan: Plan | null; planError: string | null; srAvailable: boolean }
+interface Props { s: Settings; set: (s: Settings) => void; plan: Plan | null; planError: string | null; srAvailable: boolean; faceAvailable: boolean; image?: ImageRef }
 
-export default function Controls({ s, set, plan, planError, srAvailable }: Props) {
+export default function Controls({ s, set, plan, planError, srAvailable, faceAvailable, image }: Props) {
   const p = PRESET[s.intensity];
   const v = (k: "denoise" | "color" | "sharpen", i: number) => s[k] ?? p[i];
   return (
@@ -81,9 +86,50 @@ export default function Controls({ s, set, plan, planError, srAvailable }: Props
         </div>
       )}
 
-      <section className="rounded-lg border border-dashed border-ink-600 p-3">
-        <h3 className="text-sm font-semibold">Rostros y piel · no disponible aún</h3>
-        <p className="label mt-1">La restauración facial con IA (GFPGAN/CodeFormer) y el retoque de piel están planificados para las fases 2–3 y todavía no existen en esta versión. La superresolución general sí actúa sobre los rostros sin alterar su forma.</p>
+      <section className="space-y-3" aria-labelledby="faces">
+        <label id="faces" className="flex items-center justify-between text-sm font-semibold">
+          Restauración de rostros con IA
+          <input type="checkbox" className="h-5 w-5 accent-amber-400" checked={s.faces && faceAvailable} disabled={!faceAvailable} onChange={(e) => set({ ...s, faces: e.target.checked })} />
+        </label>
+        {!faceAvailable && <p className="label">Modelos de rostros no instalados: ejecuta <code>scripts/descargar_modelos.sh</code> (~540 MB).</p>}
+        {s.faces && faceAvailable && (
+          <>
+            <Slider label="Intensidad (bajo = conserva más tu rostro original)" value={s.faceStrength} onChange={(x) => set({ ...s, faceStrength: x })} />
+            <p className="label">GFPGAN reconstruye ojos, boca y piel; con intensidad alta puede cambiar ligeramente la expresión. Recomendado 50–70 %.</p>
+            {image && image.faces.length > 0 && (
+              <div>
+                <p className="label mb-1">Rostros detectados (desmarca para dejar uno sin tocar)</p>
+                <div className="flex flex-wrap gap-2">
+                  {image.faces.map((b, i) => {
+                    const on = !s.excluded.includes(i); const k = 56 / b.w;
+                    return (
+                      <button key={i} role="checkbox" aria-checked={on} aria-label={`Rostro ${i + 1}`} onClick={() => set({ ...s, excluded: on ? [...s.excluded, i] : s.excluded.filter((x) => x !== i) })}
+                        className={`relative h-14 w-14 overflow-hidden rounded-lg border-2 ${on ? "border-amber-glow" : "border-ink-600 opacity-40"}`}
+                        style={{ backgroundImage: `url(${api.imageUrl(image.id)})`, backgroundSize: `${image.width * k}px ${image.height * k}px`, backgroundPosition: `${-b.x * k}px ${-b.y * k}px` }}>
+                        <span className="absolute bottom-0 right-0 rounded-tl bg-black/70 px-1 text-[10px]">{on ? "✓" : "✕"}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+          </>
+        )}
+      </section>
+
+      <section className="space-y-3" aria-labelledby="skin">
+        <label id="skin" className="flex items-center justify-between text-sm font-semibold">
+          Retoque natural de piel
+          <input type="checkbox" className="h-5 w-5 accent-amber-400" checked={s.skin} onChange={(e) => set({ ...s, skin: e.target.checked })} />
+        </label>
+        {s.skin && (
+          <>
+            <Slider label="Suavizar imperfecciones" value={s.skinSmooth} onChange={(x) => set({ ...s, skinSmooth: x })} />
+            <Slider label="Reducir arrugas finas" value={s.skinWrinkles} onChange={(x) => set({ ...s, skinWrinkles: x })} />
+            <label className="flex items-center gap-2 text-sm"><input type="checkbox" className="accent-amber-400" checked={s.keepTexture} onChange={(e) => set({ ...s, keepTexture: e.target.checked })} /> Conservar textura natural</label>
+            <p className="label">Edición clásica (no generativa): no cambia el tono ni los rasgos. Solo actúa sobre rostros frontales detectados.</p>
+          </>
+        )}
       </section>
     </div>
   );

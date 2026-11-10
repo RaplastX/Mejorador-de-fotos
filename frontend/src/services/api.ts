@@ -10,6 +10,7 @@ export interface Plan { factor: number; width: number; height: number; generativ
 export interface JobOptions {
   image_id: string; intensity: "suave" | "equilibrada" | "intensa"; denoise?: number; color?: number; sharpen?: number;
   upscale: boolean; target: "original" | "1080p" | "2k" | "4k"; scale: number;
+  faces?: boolean; face_strength?: number; skin?: boolean; skin_smooth?: number; skin_wrinkles?: number; keep_texture?: boolean; exclude_faces?: { x: number; y: number; w: number; h: number }[];
 }
 export interface Job {
   id: string; image_id: string; status: "queued" | "running" | "done" | "cancelled" | "error"; progress: number;

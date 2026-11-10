@@ -4,7 +4,7 @@ Aplicación **local y privada** de mejora fotográfica con IA para uso personal 
 
 > Nombre centralizado en `backend/app/core/config.py` (`APP_NAME`) y `frontend/src/brand.ts`.
 
-## Estado real de las funciones (v0.1.0 — Fase 1 / MVP)
+## Estado real de las funciones (v0.2.0)
 
 | Función | Estado |
 |---|---|
@@ -16,8 +16,10 @@ Aplicación **local y privada** de mejora fotográfica con IA para uso personal 
 | Exportar JPEG/PNG/WebP, calidad, EXIF opcional, **GPS eliminado por defecto**, alfa conservado en PNG/WebP | ✅ Completa |
 | Procesamiento por lotes con progreso, cancelación segura y descarga individual | 🟡 Implementada, sin probar aún en navegador |
 | Avisos de reconstrucción generativa y límites de memoria | ✅ Completa |
-| Restauración facial con IA (GFPGAN), foto antigua, colorización | ⏳ Fase 2 — **no existe aún** (la UI lo indica) |
-| Retoque natural de piel / arrugas | ⏳ Fase 3 — **no existe aún** |
+| Restauración facial con IA (GFPGAN v1.4): intensidad, y activar/desactivar cada rostro | ✅ Completa (probada) |
+| Retoque natural de piel y arrugas (edición clásica, conserva textura, intensidades independientes) | ✅ Completa (probada en un rostro frontal) |
+| Uso desde el móvil (Android/iPhone) como app instalable (PWA), con el PC como motor y emparejamiento por token | ✅ Probada en iPhone emulado; **no probada en un móvil físico** |
+| Foto antigua: eliminar rayones, colorización | ⏳ Pendiente (los rayones se ven) |
 | Eliminación de objetos (inpainting), recorte/enderezado, presets, HEIC/TIFF | ⏳ Pendiente |
 | Empaquetado como instalador (Tauri) | ⏳ Fase 5 |
 
@@ -33,10 +35,23 @@ scripts/iniciar.sh         # abre http://127.0.0.1:8765
 Tras instalar, **funciona sin conexión**. Diagnóstico: `scripts/diagnostico.sh`.
 
 ### Modelos
-`scripts/descargar_modelos.sh` descarga **solo** el modelo oficial de Real-ESRGAN desde su release de GitHub y verifica el SHA-256. Para actualizarlo, cambia URL y checksum en `backend/app/models/registry.py` y en el script. Los pesos no se incluyen en el repositorio.
+`scripts/descargar_modelos.sh` descarga desde releases oficiales de GitHub, verificando SHA-256: Real-ESRGAN (5 MB) y, salvo `--sin-rostros`, GFPGAN v1.4 + RetinaFace + ParseNet (~540 MB en total). Nada se descarga por su cuenta al usar la app. Para actualizarlo, cambia URL y checksum en `backend/app/models/registry.py` y en el script. Los pesos no se incluyen en el repositorio.
 
 ### Variables opcionales
 `LUMA_PORT`, `LUMA_DEVICE=cpu|cuda|auto`, `LUMA_TILE` (tamaño de mosaico, baja si falta memoria), `LUMA_MAX_OUTPUT_PIXELS`, `LUMA_THREADS`, `LUMA_DATA_DIR`.
+
+## Uso desde el móvil (el PC hace el trabajo, sin límites ni cuotas)
+No existe ninguna API en la nube gratuita y sin límites para esto, y las suscripciones (p. ej. Google AI Pro/Flow) no dan acceso a API. La opción gratuita e ilimitada es tu propio PC (con GPU NVIDIA si la hay):
+
+```bash
+scripts/iniciar-movil.sh     # muestra un enlace y un QR de emparejamiento
+```
+1. Móvil y PC en la **misma Wi-Fi**: abre el enlace/QR en el móvil una vez. Queda emparejado (cookie privada de 1 año).
+2. **Fuera de casa**: instala [Tailscale](https://tailscale.com) (gratis) en PC y móvil y usa la IP de Tailscale que imprime el script. No se abre ningún puerto a internet.
+3. **Instalar como app**: Android (Chrome) → menú → "Instalar app". iPhone (Safari) → Compartir → "Añadir a pantalla de inicio". La instalación completa de PWA exige HTTPS: con Tailscale ejecuta `tailscale serve --bg 8765` y usa la URL https que da. Por HTTP simple en Wi-Fi funciona como página web/atajo.
+4. Para revocar el acceso, borra `~/.local/share/luma-enhance/token` y reinicia.
+
+Seguridad: sin el token todo devuelve 401; el token (256 bits) se guarda con permisos 0600; el enlace de emparejamiento contiene la clave, no lo compartas. No hay cifrado en HTTP por Wi-Fi doméstica: usa Tailscale o `tailscale serve` si la red no es de confianza.
 
 ## Uso
 1. **Mejorar fotografía** → elige una imagen (varias a la vez abre el modo por lotes).
@@ -51,11 +66,13 @@ cd frontend && npm run typecheck && npm run lint && npm run build
 ```
 
 ## Documentación
+Galería de resultados reales: ver la página publicada (también reproducible con `scripts/galeria_datos.py`).
 `docs/INVESTIGACION_TECNICA.md` · `docs/DECISIONES.md` · `docs/PRIVACIDAD.md` · `docs/RENDIMIENTO.md` · `docs/PRUEBAS.md`
 
 ## Limitaciones conocidas
 - Sin GPU, 4K es lento (ver `docs/RENDIMIENTO.md`).
 - La superresolución **reconstruye** detalle plausible; no recupera información inexistente. Con fuentes muy comprimidas puede dibujar halos y texturas "pintadas" en rostros.
+- La restauración facial reconstruye rasgos: con intensidad alta puede alterar ligeramente la expresión; usa 50–70 %. Solo actúa en rostros frontales detectados (el retoque de piel usa un detector Haar, menos robusto con perfiles o caras pequeñas).
 - El modelo compacto prioriza velocidad; un modelo más grande (RealESRGAN_x4plus, SwinIR, HAT) daría más calidad pero no está integrado.
 - La vista en pantalla se reduce a 2048 px; la exportación usa la resolución completa.
 - Los trabajos y temporales viven solo mientras el servidor está activo (se borran al cerrarlo).

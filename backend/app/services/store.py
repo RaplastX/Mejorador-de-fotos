@@ -75,7 +75,7 @@ class Store:
         fmt = img.format or "PNG"
         iid = uuid.uuid4().hex
         d = self.root / iid
-        d.mkdir(mode=0o700)
+        d.mkdir(mode=0o700, parents=True)
         try:
             (d / f"original.{image_io.ALLOWED_FORMATS[fmt]}").write_bytes(data)  # original intacto, solo lectura
             os.chmod(d / f"original.{image_io.ALLOWED_FORMATS[fmt]}", 0o400)

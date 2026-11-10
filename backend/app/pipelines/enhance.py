@@ -13,9 +13,9 @@ from ..models.upscaler import get_upscaler
 from . import basic
 
 INTENSITY = {  # presets: (denoise, color, sharpen)
-    "suave": (0.25, 0.35, 0.25),
-    "equilibrada": (0.5, 0.6, 0.5),
-    "intensa": (0.8, 0.85, 0.8),
+    "suave": (0.25, 0.25, 0.25),
+    "equilibrada": (0.5, 0.4, 0.5),
+    "intensa": (0.8, 0.75, 0.8),
 }
 TARGET_LONG_SIDE = {"1080p": 1920, "2k": 2560, "4k": 3840}
 
@@ -30,6 +30,13 @@ class Options:
     target: str = "original"  # original | 1080p | 2k | 4k
     scale: float = 2.0  # usado cuando target == original (x1, x2, x4)
     allow_downscale: bool = False
+    faces: bool = False
+    face_strength: float = 0.7  # 0 = rostro original, 1 = restauración completa
+    skin: bool = False
+    skin_smooth: float = 0.35
+    skin_wrinkles: float = 0.35
+    keep_texture: bool = True
+    exclude_faces: tuple = ()  # cajas (x, y, w, h) en coordenadas de la imagen ORIGINAL
 
     def resolved(self) -> tuple[float, float, float]:
         d, c, s = INTENSITY.get(self.intensity, INTENSITY["equilibrada"])
@@ -61,6 +68,10 @@ def plan_output(width: int, height: int, opts: Options) -> dict:
         warnings.append("El factor supera 4×: se aplica 4× con IA y el resto con interpolación; el detalle extra no es real.")
     if generative and long_side < 600 and factor >= 3:
         warnings.append("La imagen original es muy pequeña: el resultado a gran resolución reconstruye detalles de forma aproximada.")
+    if opts.skin:
+        warnings.append("El retoque de piel es edición clásica y subjetiva: úsalo con intensidad baja para conservar poros, lunares y rasgos. Solo actúa donde se detecta un rostro frontal.")
+    if opts.faces:
+        warnings.append("La restauración facial con IA reconstruye rasgos que no se distinguen en la foto; con intensidad alta puede alterar la expresión o parecer artificial. Baja la intensidad para conservar la identidad.")
     if generative:
         warnings.append("El escalado con IA reconstruye detalle plausible; no recupera información que no existía en la foto original.")
     if out_w * out_h > settings.max_output_pixels:
@@ -113,7 +124,28 @@ def run(
             img = cv2.resize(img, (tw, th), interpolation=interp)
         # Tras la SR ya hay nitidez; se aplica un refuerzo menor para no crear halos.
         shp *= 0.5
-    progress(0.95, "Afinando nitidez")
+    if opts.faces:
+        from ..services import face_restore
+
+        fr = face_restore.get_face_restorer()
+        f = plan["factor"]
+        excl = [(x * f, y * f, bw * f, bh * f) for x, y, bw, bh in opts.exclude_faces]
+        progress(0.93, "Restaurando rostros")
+        img, n = fr.restore(img, opts.face_strength, excl, lambda p: progress(0.93 + 0.05 * p, "Restaurando rostros"), cancelled)
+        check()
+        if n == 0:
+            progress(0.98, "No se encontraron rostros que mejorar")
+    if opts.skin:
+        from ..services import faces as face_det
+        from . import skin
+
+        progress(0.985, "Retocando piel")
+        f = plan["factor"]
+        excl = [(x * f, y * f, bw * f, bh * f) for x, y, bw, bh in opts.exclude_faces]
+        boxes = [b for b in face_det.detect_faces(img)
+                 if not any(ex <= b[0] + b[2] / 2 <= ex + ew and ey <= b[1] + b[3] / 2 <= ey + eh for ex, ey, ew, eh in excl)]
+        img = skin.retouch(img, boxes, opts.skin_smooth, opts.skin_wrinkles, opts.keep_texture)
+    progress(0.99, "Afinando nitidez")
     img = basic.sharpen(img, shp)
     progress(1.0, "Listo")
     return np.clip(img, 0, 1).astype(np.float32)

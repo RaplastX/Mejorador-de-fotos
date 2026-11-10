@@ -10,3 +10,10 @@
 - **Seguridad**: bind 127.0.0.1, `TrustedHostMiddleware` (anti DNS-rebinding), IDs UUID validados por regex (sin rutas del usuario), nombres de salida saneados, validación por contenido, límites de bytes/píxeles de entrada y salida, errores sin trazas ni rutas.
 - **Funciones no implementadas** (cara/piel/inpainting) se anuncian como no disponibles (`features` en `/api/system` = false) en vez de simularse.
 - **Descartado**: ONNX Runtime, MediaPipe, Electron, cuentas/BD, nube.
+
+## v0.2.0
+- **Móvil = PWA + PC como motor**: un teléfono no ejecuta estos modelos con calidad razonable, y no hay API en la nube gratuita sin límites. Alternativa descartada: app nativa con modelo ligero (mucho menos calidad).
+- **Autenticación solo en modo remoto**, por token + cookie; en modo local se mantiene `TrustedHost` sin credenciales.
+- **GFPGAN sin basicsr**: se vendoriza la arquitectura clean con shim. Mezcla ajustable restaurado/original para preservar identidad (en lugar del parámetro interno `weight`).
+- **Retoque de piel clásico, no generativo**: separación de frecuencias en máscara de piel; así no cambia identidad y es reversible (no destructivo, siempre desde el original). Detector Haar para sus cajas (limitación conocida).
+- **Preajustes de color más suaves** tras ver que «equilibrada» sobreactuaba contraste en la galería.

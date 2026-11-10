@@ -26,3 +26,7 @@ input[type="range"] { accent-color: var(--color-amber-glow); width: 100%; }
 .btn-ghost:hover:not(:disabled) { background:var(--color-ink-700); } .btn-ghost:disabled{ opacity:.4; cursor:not-allowed; }
 .card { background:var(--color-ink-900); border:1px solid var(--color-ink-700); border-radius:1rem; }
 .label { font-size:.8rem; color:var(--color-ink-300); }
+
+button, select, input[type="checkbox"] { touch-action: manipulation; }
+@media (pointer: coarse) { .btn-ghost { padding: .6rem .9rem; min-height: 44px; } input[type="range"] { height: 28px; } }
+header { padding-top: max(.75rem, env(safe-area-inset-top)); }

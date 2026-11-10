@@ -7,11 +7,11 @@ command -v python3 >/dev/null || { echo "Falta Python 3.10+"; exit 1; }
 python3 -m venv .venv
 .venv/bin/pip install -q --upgrade pip
 if [ "$VARIANTE" = "cuda" ]; then
-  .venv/bin/pip install -q "torch==2.15.0"           # rueda estándar de PyPI (incluye CUDA)
+  .venv/bin/pip install -q "torch==2.15.0" "torchvision==0.29.2"
 else
-  .venv/bin/pip install -q "torch==2.15.0" --index-url https://download.pytorch.org/whl/cpu
+  .venv/bin/pip install -q "torch==2.15.0" "torchvision==0.29.2" --index-url https://download.pytorch.org/whl/cpu
 fi
-.venv/bin/pip install -q -r backend/requirements.txt
+.venv/bin/pip install -q -r backend/requirements.txt && .venv/bin/pip install -q --no-deps facexlib==0.3.0
 scripts/descargar_modelos.sh
 if command -v npm >/dev/null; then
   (cd frontend && npm ci --silent && npm run build --silent)

@@ -12,6 +12,7 @@ export default function Batch({ files, system, onBack }: { files: File[]; system
   const stop = useRef(false);
   const currentJob = useRef<string | null>(null);
   const srAvailable = system?.features.upscale ?? false;
+  const faceAvailable = system?.features.face_restoration ?? false;
 
   const patch = (i: number, p: Partial<Row>) => setRows((r) => r.map((x, k) => (k === i ? { ...x, ...p } : x)));
 
@@ -23,7 +24,7 @@ export default function Batch({ files, system, onBack }: { files: File[]; system
       try {
         patch(i, { state: "analizando", progress: 0 });
         const info = await api.upload(rows[i].file);
-        const job = await api.createJob(toOptions(info.id, { ...settings, upscale: settings.upscale && srAvailable }));
+        const job = await api.createJob(toOptions(info.id, { ...settings, upscale: settings.upscale && srAvailable, faces: settings.faces && faceAvailable, excluded: [] }));
         currentJob.current = job.id; patch(i, { state: "procesando" });
         const done = await api.wait(job.id, (j) => patch(i, { progress: j.progress }));
         currentJob.current = null;
@@ -57,7 +58,7 @@ export default function Batch({ files, system, onBack }: { files: File[]; system
         <p className="label">Cada resultado se descarga al terminar (usa la carpeta de descargas del navegador). Los originales no se modifican y los temporales de cada foto se borran al exportarla.</p>
       </div>
       <aside className="card space-y-4 p-4">
-        <Controls s={settings} set={setSettings} plan={null} planError={null} srAvailable={srAvailable} />
+        <Controls s={settings} set={setSettings} plan={null} planError={null} srAvailable={srAvailable} faceAvailable={faceAvailable} />
         <div className="grid grid-cols-3 gap-1 rounded-xl bg-ink-800 p-1" role="radiogroup" aria-label="Formato de salida">
           {(["jpeg", "png", "webp"] as const).map((f) => <button key={f} role="radio" aria-checked={exp.format === f} onClick={() => setExp({ ...exp, format: f })} className={`rounded-lg px-2 py-1.5 text-sm uppercase ${exp.format === f ? "bg-amber-glow font-semibold text-black" : "text-ink-300"}`}>{f}</button>)}
         </div>

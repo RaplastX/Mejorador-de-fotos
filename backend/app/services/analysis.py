@@ -67,7 +67,7 @@ def analyze(rgb: np.ndarray, faces: int) -> dict:
     if contrast < 0.12:
         rec.append("Contraste bajo: la corrección de tono puede darle más vida.")
     if faces:
-        rec.append(f"Se detectaron {faces} rostro(s). La mejora facial con IA aún no está disponible; la superresolución general respeta los rasgos.")
+        rec.append(f"Se detectaron {faces} rostro(s). Puedes activar la restauración de rostros con IA (intensidad ajustable).")
     if not rec:
         rec.append("La imagen está en buen estado; una mejora suave es suficiente.")
 

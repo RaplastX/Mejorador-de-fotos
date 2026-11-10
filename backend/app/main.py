@@ -5,11 +5,12 @@ import shutil
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Request
-from fastapi.responses import FileResponse, JSONResponse
+from fastapi.responses import FileResponse, JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from starlette.middleware.trustedhost import TrustedHostMiddleware
 
 from .api.routes import router
+from .core import auth
 from .core.config import APP_NAME, APP_VERSION, settings
 from .core.errors import AppError
 
@@ -26,8 +27,27 @@ async def lifespan(app: FastAPI):
 
 def create_app() -> FastAPI:
     app = FastAPI(title=APP_NAME, version=APP_VERSION, lifespan=lifespan, docs_url=None, redoc_url=None, openapi_url=None)
-    # Protege contra DNS-rebinding: solo se atiende a localhost.
-    app.add_middleware(TrustedHostMiddleware, allowed_hosts=["127.0.0.1", "localhost", "testserver"])
+    if settings.remote:
+        # Modo móvil: cualquier Host de la red local/VPN, pero TODO exige el token (protege también frente a DNS-rebinding).
+        auth.get_token()
+
+        @app.middleware("http")
+        async def require_token(request: Request, call_next):
+            path = request.url.path
+            if path == "/pair":
+                if auth.token_ok(request.query_params.get("t")):
+                    resp = RedirectResponse("/", status_code=303)
+                    resp.set_cookie(auth.COOKIE, auth.get_token(), httponly=True, samesite="strict", max_age=60 * 60 * 24 * 365)
+                    return resp
+                return JSONResponse({"error": "unauthorized", "message": "Enlace de emparejamiento no válido."}, status_code=401)
+            if auth.is_public(path) or auth.token_ok(request.cookies.get(auth.COOKIE)):
+                return await call_next(request)
+            if path.startswith("/api/"):
+                return JSONResponse({"error": "unauthorized", "message": "Dispositivo no emparejado. Escanea el QR del PC."}, status_code=401)
+            return JSONResponse({"error": "unauthorized", "message": "Dispositivo no emparejado. Escanea el QR que muestra el PC."}, status_code=401)
+    else:
+        # Solo local: protege contra DNS-rebinding.
+        app.add_middleware(TrustedHostMiddleware, allowed_hosts=["127.0.0.1", "localhost", "testserver"])
 
     @app.exception_handler(AppError)
     async def _app_error(_: Request, exc: AppError):

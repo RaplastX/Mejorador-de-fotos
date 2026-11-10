@@ -6,7 +6,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 APP_NAME = "Luma Enhance"  # nombre provisional: cambiar solo aquí y en frontend/src/brand.ts
-APP_VERSION = "0.1.0"
+APP_VERSION = "0.2.0"
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 
@@ -21,7 +21,9 @@ class Settings:
     data_dir: Path = field(default_factory=lambda: Path(os.environ.get("LUMA_DATA_DIR", _default_data_dir())))
     models_dir: Path = field(default_factory=lambda: Path(os.environ.get("LUMA_MODELS_DIR", REPO_ROOT / "models")))
     frontend_dist: Path = field(default_factory=lambda: REPO_ROOT / "frontend" / "dist")
-    host: str = "127.0.0.1"  # solo local: no se acepta tráfico remoto
+    # Por defecto solo local. LUMA_REMOTE=1 abre el servidor a la red local/VPN y EXIGE token de emparejamiento.
+    remote: bool = os.environ.get("LUMA_REMOTE", "0") == "1"
+    host: str = field(default_factory=lambda: "0.0.0.0" if os.environ.get("LUMA_REMOTE", "0") == "1" else "127.0.0.1")
     port: int = int(os.environ.get("LUMA_PORT", "8765"))
     max_upload_bytes: int = 60 * 1024 * 1024
     max_input_pixels: int = 60_000_000  # 60 MP
@@ -31,6 +33,10 @@ class Settings:
     delete_temp_on_exit: bool = True
     torch_threads: int = int(os.environ.get("LUMA_THREADS", "0"))  # 0 = automático
     device_preference: str = os.environ.get("LUMA_DEVICE", "auto")  # auto | cpu | cuda
+
+    @property
+    def token_file(self) -> Path:
+        return self.data_dir / "token"
 
     @property
     def sessions_dir(self) -> Path:

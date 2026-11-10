@@ -26,7 +26,10 @@ def wait(client, jid, timeout=120):
 def test_system_is_local_and_private(client):
     j = client.get("/api/system").json()
     assert j["privacy"] == {"local_only": True, "telemetry": False, "host": "127.0.0.1"}
-    assert j["features"]["face_restoration"] is False  # no se anuncia lo que no existe
+    from backend.app.services import face_restore
+
+    assert j["features"]["face_restoration"] is face_restore.available()  # solo se anuncia lo que existe de verdad
+    assert j["features"]["inpainting"] is False  # aún no implementado
 
 
 def test_rejects_invalid_and_unsupported(client):

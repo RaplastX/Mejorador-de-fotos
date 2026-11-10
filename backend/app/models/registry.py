@@ -33,7 +33,42 @@ MODELS: dict[str, ModelInfo] = {
         source="https://github.com/xinntao/Real-ESRGAN",
         purpose="Superresolución x4 y reducción de ruido/artefactos (CPU y GPU)",
     ),
+    "gfpgan-v1.4": ModelInfo(
+        key="gfpgan-v1.4",
+        title="GFPGAN v1.4 (restauración facial)",
+        filename="GFPGANv1.4.pth",
+        url="https://github.com/TencentARC/GFPGAN/releases/download/v1.3.0/GFPGANv1.4.pth",
+        sha256="e2cd4703ab14f4d01fd1383a8a8b266f9a5833dacee8e6a79d3bf21a1b6be5ad",
+        code_license="Apache-2.0 (TencentARC/GFPGAN)",
+        weights_license="Publicados en el release oficial del repo Apache-2.0; sin licencia de pesos separada visible. Entrenados con FFHQ (términos del dataset: no verificados)",
+        source="https://github.com/TencentARC/GFPGAN",
+        purpose="Restauración de rostros (reconstruye detalle facial; mezcla ajustable con el rostro original)",
+    ),
+    "retinaface-resnet50": ModelInfo(
+        key="retinaface-resnet50",
+        title="RetinaFace ResNet50 (detección y alineado de rostros)",
+        filename="detection_Resnet50_Final.pth",
+        url="https://github.com/xinntao/facexlib/releases/download/v0.1.0/detection_Resnet50_Final.pth",
+        sha256="6d1de9c2944f2ccddca5f5e010ea5ae64a39845a86311af6fdf30841b0a5a16d",
+        code_license="MIT (xinntao/facexlib)",
+        weights_license="Release oficial de facexlib; sin licencia de pesos separada visible",
+        source="https://github.com/xinntao/facexlib",
+        purpose="Localiza rostros y 5 puntos para alinear; no guarda plantillas ni identifica personas",
+    ),
+    "parsing-parsenet": ModelInfo(
+        key="parsing-parsenet",
+        title="ParseNet (segmentación facial, requerido por facexlib)",
+        filename="parsing_parsenet.pth",
+        url="https://github.com/xinntao/facexlib/releases/download/v0.2.2/parsing_parsenet.pth",
+        sha256="3d558d8d0e42c20224f13cf5a29c79eba2d59913419f945545d8cf7b72920de2",
+        code_license="MIT (xinntao/facexlib)",
+        weights_license="Release oficial de facexlib; sin licencia de pesos separada visible",
+        source="https://github.com/xinntao/facexlib",
+        purpose="facexlib lo carga siempre al preparar el restaurador; no se usa para identificar personas",
+    ),
 }
+
+# Los SHA-256 de GFPGAN, RetinaFace y ParseNet se fijaron a partir de la primera descarga oficial (upstream no publica checksums).
 
 
 def model_path(key: str) -> Path:
