@@ -45,7 +45,7 @@ export default function Home({ onFiles, onOpen, busy, error }: Props) {
               <input ref={input} type="file" multiple accept="image/jpeg,image/png,image/webp,image/tiff,image/heic,image/heif" className="hidden" aria-label="Elegir fotografías"
                 onChange={(e) => { const f = [...(e.target.files ?? [])]; if (f.length) onFiles(f); e.target.value = ""; }} />
             </div>
-            {api.mode === "navegador" && <p className="label rounded-xl border border-ink-700 bg-ink-900 px-3 py-2 text-left">Versión en el navegador: tus fotos no salen de este dispositivo y funciona sin conexión tras la primera carga. Incluye superresolución, ruido, color, luz, recorte y giro. Rostros, colorización y borrar objetos requieren la versión con servidor.</p>}
+            {api.mode === "navegador" && <p className="label rounded-xl border border-ink-700 bg-ink-900 px-3 py-2 text-left">Versión en el navegador: tus fotos no salen de este dispositivo. Necesita conexión para cargar la app. Incluye superresolución, ruido, color, luz, recorte y giro. Rostros, colorización y borrar objetos requieren la versión con servidor.</p>}
             {error && <p role="alert" className="rounded-xl border border-red-500/40 bg-red-500/10 px-4 py-2 text-left text-sm text-red-200">{error}</p>}
           </div>
 

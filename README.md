@@ -29,6 +29,9 @@ Aplicación **local y privada** de mejora fotográfica con IA para uso personal 
 | Corrección de perspectiva, colorización por zonas, selección con lazo | ⏳ No implementado |
 | Empaquetado como instalador (Tauri) | ⏳ Fase 5 |
 
+## Sitio público
+**https://luma-enhance.dylandavenxglob.workers.dev** (Cloudflare Worker + KV, plan gratuito). Es la versión del navegador: fotos 100 % en el dispositivo, sin límites de uso por parte de la app. Publicado con `python scripts/publicar_worker.py --site <carpeta compilada> --confirmo-publico`; el Worker está en `cloudflare/worker.js` (sirve ficheros gzip desde KV con las cabeceras de aislamiento que activan los hilos WASM; `no-transform` evita que el borde de Cloudflare los recomprima).
+
 ## Versión que corre en el navegador (sin servidor)
 La misma interfaz funciona **sin servidor**: si no encuentra la API, usa un motor propio en el navegador (ONNX Runtime Web, con WebGPU si el dispositivo lo permite y WASM si no). Las fotos no salen del dispositivo.
 - Incluye: superresolución 2×/4×/1080p/2K/4K, ruido, color, sombras/luces, nitidez, recorte, giro y enderezado, lotes, presets y versiones.
@@ -36,7 +39,8 @@ La misma interfaz funciona **sin servidor**: si no encuentra la API, usa un moto
 - Calidad: resultado casi idéntico al del servidor (diferencia media 0,019 en una prueba). Rendimiento medido: 256→512 px en 7,5–7,9 s con WASM de un hilo en CPU de servidor; **WebGPU y móvil real no medidos**. Fotos de más de 1 MP tardan mucho sin GPU; el límite es 4 MP de entrada para ampliar y 12 MP de salida.
 - Compilar: `cd frontend && npm ci && npm run build` (sitio estático en `frontend/dist`; copia el runtime de ONNX desde `node_modules`). Para el artefacto de Claude: `npm run build:artifact` (variante solo-WASM, 17 MB).
 - Regenerar el modelo: `python scripts/exportar_onnx.py` (verifica contra PyTorch).
-- **Cloudflare Pages: no publicado.** Hace falta tu autorización expresa porque crea un sitio público. Pasos manuales desde el móvil: panel de Cloudflare → Workers y Pages → Crear → Pages → Conectar con Git → este repositorio y rama; comando de compilación `cd frontend && npm ci && npm run build`; directorio de salida `frontend/dist`. Las cabeceras de `frontend/public/_headers` activan hilos WASM donde el navegador los admite. No uses `wrangler pages project create` con wrangler 4.153: se delega en Workers y modifica el proyecto.
+- **Por qué Worker+KV y no Pages**: en este entorno el proxy sustituye la cabecera `Authorization` de `api.cloudflare.com`, y la subida de ficheros de Pages usa un token temporal propio (error 8000013). Existe un proyecto Pages vacío `luma-enhance` creado en ese intento; se puede borrar desde el panel. No uses wrangler 4.153 (`pages project create` se delega en Workers y modifica el repo).
+- Sin service worker en el sitio público: **no funciona sin conexión**.
 
 ## Alojar en internet (para usar sin PC)
 - **Hugging Face Spaces: ya no es gratis para esto.** Probado 2026-11-10: crear un Space Docker en `cpu-basic` devuelve «requires a PRO subscription» (HTTP 402). Por eso no hay Space publicado. `Dockerfile` y `scripts/publicar_space.py` (privado por defecto, `--publico` explícito) quedan listos por si se paga PRO o se usa otro host con Docker. La imagen nunca se construyó: no hay demonio Docker en el entorno de desarrollo.

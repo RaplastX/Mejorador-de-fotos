@@ -51,3 +51,14 @@
 | Publicación como Artifact privado de Claude | ⚠ publicado, **sin verificar dentro del visor de Claude** (WASM, workers y el nombre `.onnx.wasm` del modelo dependen de la sandbox) |
 | WebGPU, hilos WASM, móvil físico, Safari | ❌ no probado |
 | Cloudflare Pages | ❌ no publicado (sin autorización); un intento fallido de `wrangler` modificó el repo y se revirtió; no creó nada en la cuenta (verificado en lectura) |
+
+## Despliegue en Cloudflare (2026-11-10)
+| Prueba | Resultado |
+|---|---|
+| Pages (`wrangler pages deploy`) | ❌ «Authorization failed 8000013»: el proxy sustituye el token temporal de subida |
+| Worker + KV con `scripts/publicar_worker.py` | ✅ 16 ficheros, 30 MB → ~11 MB comprimidos |
+| Descompresión en navegador con `Accept-Encoding: gzip, br, zstd` | ❌ primero (el borde recomprimía) → ✅ tras `Cache-Control: no-transform` (comprobado los dos casos) |
+| E2E desde la URL pública (Chromium): modo navegador, aislamiento activo, subir → 2× → exportar 512×512 | ✅ 6,3 s (con descarga inicial del modelo) |
+| Hilos WASM con COOP/COEP (local) | ✅ 4,3 s frente a 7,5 s sin hilos (4 núcleos) |
+| Captura iPhone emulado desde la URL pública | ✅ |
+| Móvil real, Safari, WebGPU, fotos grandes | ❌ no probado |

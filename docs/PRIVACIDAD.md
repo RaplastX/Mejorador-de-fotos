@@ -21,3 +21,8 @@
 - El servidor escucha solo en 127.0.0.1; únicamente el túnel llega a él, y todo exige el token (256 bits).
 - Las fotos y temporales viven en el disco de la sesión de Colab y se pierden al cerrarla.
 - `cloudflared` se descarga de github.com/cloudflare/cloudflared sin verificar checksum (no automatizado).
+
+## Sitio público (Cloudflare Worker + KV)
+- Sirve solo ficheros estáticos (app, modelo, runtime). **Las fotos nunca se envían**: el procesado ocurre en el dispositivo (verificado: solo hay peticiones al propio dominio y a Google Fonts).
+- Cloudflare ve lo habitual de un sitio web (IP, cabeceras, ficheros pedidos); Google Fonts ve la IP al cargar las tipografías. La app no incluye analítica ni cookies.
+- Las exportaciones salen sin EXIF/GPS.
