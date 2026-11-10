@@ -157,8 +157,13 @@ export default function Editor({ info, system, initialTool, onBack, onReplace, o
             <label className="block"><span className="flex justify-between label"><span>Calidad</span><span>{exp.quality}</span></span>
               <input type="range" min={60} max={100} value={exp.quality} onChange={(e) => setExp({ ...exp, quality: +e.target.value })} aria-label="Calidad de exportación" /></label>
           )}
+          {!features.local && (
+            <>
           <label className="flex items-center gap-2 text-sm"><input type="checkbox" className="accent-amber-400" checked={exp.keep_metadata} onChange={(e) => setExp({ ...exp, keep_metadata: e.target.checked, keep_gps: e.target.checked && exp.keep_gps })} /> Conservar metadatos EXIF</label>
           <label className={`flex items-center gap-2 text-sm ${exp.keep_metadata ? "" : "opacity-50"}`}><input type="checkbox" className="accent-amber-400" disabled={!exp.keep_metadata} checked={exp.keep_gps} onChange={(e) => setExp({ ...exp, keep_gps: e.target.checked })} /> Conservar ubicación GPS</label>
+            </>
+          )}
+          {features.local && <p className="label">Se exporta sin metadatos (EXIF/GPS) por privacidad.</p>}
           <button className="btn" disabled={!cur || !!running} onClick={save}>Guardar copia</button>
           {!cur && <p className="label">Mejora la imagen para poder exportarla. El original nunca se modifica.</p>}
           {exportMsg && <p className="label" aria-live="polite">{exportMsg}</p>}

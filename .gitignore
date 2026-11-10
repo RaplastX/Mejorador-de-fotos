@@ -10,3 +10,5 @@ data/
 *.tsbuildinfo
 models/*.pt
 bin/
+frontend/public/ort/
+frontend/dist/ort/

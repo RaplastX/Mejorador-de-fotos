@@ -41,7 +41,8 @@ async function call<T>(url: string, init?: RequestInit): Promise<T> {
 }
 const json = (method: string, body: unknown): RequestInit => ({ method, headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
 
-export const api = {
+export const remote = {
+  mode: "servidor" as "servidor" | "navegador",
   system: () => call<SystemInfo>("/api/system"),
   list: () => call<{ id: string; name: string; width: number; height: number; size: number }[]>("/api/images"),
   upload(file: File) { const f = new FormData(); f.append("file", file); return call<ImageInfo>("/api/images", { method: "POST", body: f }); },
@@ -72,5 +73,22 @@ export const api = {
     }
   },
 };
+
+export type Api = typeof remote;
+/** Objeto que usa toda la interfaz. Por defecto habla con el servidor; si no hay servidor, pasa al motor del navegador. */
+export const api: Api = { ...remote };
+
+/** Detecta si hay un servidor de mejora (API JSON). Si no, usa el motor que corre en el navegador. */
+export async function detectBackend(): Promise<"servidor" | "navegador"> {
+  try {
+    const ctl = new AbortController(); const t = setTimeout(() => ctl.abort(), 4000);
+    const r = await fetch("/api/system", { signal: ctl.signal }); clearTimeout(t);
+    if (r.ok && (r.headers.get("content-type") ?? "").includes("application/json")) return "servidor";
+    if (r.status === 401) return "servidor"; // servidor protegido: lo gestiona la pantalla de emparejamiento
+  } catch { /* sin servidor */ }
+  const { local } = await import("../engine/local");
+  Object.assign(api, local);
+  return "navegador";
+}
 
 export const fmtBytes = (n: number) => (n > 1048576 ? `${(n / 1048576).toFixed(1)} MB` : `${Math.max(1, Math.round(n / 1024))} KB`);

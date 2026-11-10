@@ -8,9 +8,12 @@
     "build": "tsc -b && vite build",
     "typecheck": "tsc -b --noEmit",
     "lint": "eslint src",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "postbuild": "node -e \"const f=require('fs');for(const n of f.readdirSync('dist/assets'))if(/^ort-wasm.*\\\\.wasm$/.test(n))f.unlinkSync('dist/assets/'+n)\"",
+    "prebuild": "node -e \"const f=require('fs'),s='node_modules/onnxruntime-web/dist/';f.mkdirSync('public/ort',{recursive:true});for(const n of ['ort-wasm-simd-threaded.asyncify.mjs','ort-wasm-simd-threaded.asyncify.wasm'])f.copyFileSync(s+n,'public/ort/'+n)\""
   },
   "dependencies": {
+    "onnxruntime-web": "1.23.2",
     "react": "19.2.0",
     "react-dom": "19.2.0"
   },

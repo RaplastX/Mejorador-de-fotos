@@ -64,7 +64,7 @@ export default function EraseTool({ info, enabled, onReplace }: { info: ImageInf
       </div>
       <div className="card w-full space-y-4 p-4 lg:w-72">
         <h3 className="text-sm font-semibold">Borrar objetos</h3>
-        {!enabled ? <p className="label">Modelo no instalado: ejecuta <code>scripts/descargar_modelos.sh</code>.</p> : <p className="label">Pinta de rojo sobre lo que quieres quitar (un poco más allá de sus bordes). El área marcada se reconstruye con contenido plausible; el resto no cambia.</p>}
+        {!enabled ? <p className="label">No disponible en esta versión: borrar objetos necesita el modelo LaMa (205 MB) que solo corre en la versión con servidor.</p> : <p className="label">Pinta de rojo sobre lo que quieres quitar (un poco más allá de sus bordes). El área marcada se reconstruye con contenido plausible; el resto no cambia.</p>}
         <label className="block"><span className="flex justify-between label"><span>Tamaño del pincel</span><span>{brush}%</span></span><input type="range" min={1} max={12} value={brush} onChange={(e) => setBrush(+e.target.value)} aria-label="Tamaño del pincel" /></label>
         <div className="grid grid-cols-2 gap-2">
           <button className="btn-ghost" disabled={!count || busy} onClick={() => { strokes.current.pop(); setCount(strokes.current.length); redraw(); }}>↶ Deshacer trazo</button>

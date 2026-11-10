@@ -74,7 +74,9 @@ function Toggle({ id, label, checked, disabled, onChange }: { id: string; label:
 function Acc({ title, open = false, children }: { title: string; open?: boolean; children: React.ReactNode }) {
   return <details className="acc" open={open}><summary>{title}</summary><div className="acc-body">{children}</div></details>;
 }
-const Missing = () => <p className="label">Modelo no instalado: ejecuta <code>scripts/descargar_modelos.sh</code>.</p>;
+const Missing = ({ local }: { local?: boolean }) => (local
+  ? <p className="label">No disponible en la versión del navegador (pesa cientos de MB). Existe en la versión con servidor.</p>
+  : <p className="label">Modelo no instalado: ejecuta <code>scripts/descargar_modelos.sh</code>.</p>);
 
 interface Props { s: Settings; set: (s: Settings) => void; plan: Plan | null; planError: string | null; features: Record<string, boolean>; image?: ImageRef }
 
@@ -121,7 +123,7 @@ export default function Controls({ s, set, plan, planError, features: f, image }
 
       <Acc title="Resolución con IA" open>
         <Toggle id="sr" label="Superresolución" checked={s.upscale && !!f.upscale} disabled={!f.upscale} onChange={(x) => set({ ...s, upscale: x })} />
-        {!f.upscale && <Missing />}
+        {!f.upscale && <Missing local={!!f.local} />}
         {s.upscale && f.upscale && (
           <>
             <label className="block"><span className="label">Tamaño de salida</span>
@@ -142,7 +144,7 @@ export default function Controls({ s, set, plan, planError, features: f, image }
 
       <Acc title="Rostros y piel">
         <Toggle id="faces" label="Restauración de rostros con IA" checked={s.faces && !!f.face_restoration} disabled={!f.face_restoration} onChange={(x) => set({ ...s, faces: x })} />
-        {!f.face_restoration && <Missing />}
+        {!f.face_restoration && <Missing local={!!f.local} />}
         {s.faces && f.face_restoration && (
           <>
             <Slider label="Intensidad (bajo = conserva más tu rostro)" value={s.faceStrength} onChange={(x) => set({ ...s, faceStrength: x })} />
@@ -182,7 +184,7 @@ export default function Controls({ s, set, plan, planError, features: f, image }
         <Toggle id="scr" label="Quitar rayones y polvo" checked={s.scratches} onChange={(x) => set({ ...s, scratches: x })} />
         {s.scratches && <><Slider label="Intensidad de limpieza" value={s.scratchStrength} onChange={(x) => set({ ...s, scratchStrength: x })} /><p className="label">Solo trazos finos y largos (verticales/horizontales) y puntos aislados. Revisa el resultado.</p></>}
         <Toggle id="col" label="Colorizar con IA" checked={s.colorize && !!f.colorize} disabled={!f.colorize} onChange={(x) => set({ ...s, colorize: x })} />
-        {!f.colorize && <Missing />}
+        {!f.colorize && <Missing local={!!f.local} />}
         {s.colorize && f.colorize && <><Slider label="Intensidad del color" value={s.colorizeStrength} onChange={(x) => set({ ...s, colorizeStrength: x })} /><p className="label">Generativo: los colores son una suposición plausible, no los reales.</p></>}
       </Acc>
     </div>
