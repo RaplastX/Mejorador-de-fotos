@@ -13,7 +13,8 @@ from ..core.errors import AppError
 from ..models import registry
 from ..models.upscaler import hardware_info
 from ..pipelines import enhance
-from ..services import analysis, face_restore, faces, image_io
+from ..pipelines import geometry
+from ..services import analysis, colorize, face_restore, faces, image_io, inpaint
 from ..services.store import get_store
 
 router = APIRouter(prefix="/api")
@@ -41,6 +42,13 @@ class JobRequest(BaseModel):
     skin_smooth: float = Field(0.35, ge=0, le=1)
     skin_wrinkles: float = Field(0.35, ge=0, le=1)
     keep_texture: bool = True
+    quality: Literal["rapida", "alta"] = "rapida"
+    shadows: float = Field(0.0, ge=-1, le=1)
+    highlights: float = Field(0.0, ge=-1, le=1)
+    redeye: bool = False
+    scratches: float = Field(0.0, ge=0, le=1)
+    colorize: bool = False
+    colorize_strength: float = Field(1.0, ge=0, le=1)
     exclude_faces: list[FaceBox] = Field(default_factory=list, max_length=64)
 
     def to_options(self) -> enhance.Options:
@@ -49,6 +57,8 @@ class JobRequest(BaseModel):
             upscale=self.upscale, target=self.target, scale=self.scale,
             faces=self.faces, face_strength=self.face_strength, skin=self.skin,
             skin_smooth=self.skin_smooth, skin_wrinkles=self.skin_wrinkles, keep_texture=self.keep_texture,
+            quality=self.quality, shadows=self.shadows, highlights=self.highlights, redeye=self.redeye,
+            scratches=self.scratches, colorize=self.colorize, colorize_strength=self.colorize_strength,
             exclude_faces=tuple((b.x, b.y, b.w, b.h) for b in self.exclude_faces),
         )
 
@@ -81,7 +91,9 @@ def system():
         "models": [registry.model_status(k) for k in registry.MODELS],
         "privacy": {"local_only": True, "telemetry": False, "host": settings.host},
         "features": {"upscale": registry.model_path("realesr-general-x4v3").is_file(), "face_detection": True,
-                     "face_restoration": face_restore.available(), "skin_retouch": True, "inpainting": False},
+                     "face_restoration": face_restore.available(), "skin_retouch": True, "inpainting": inpaint.available(),
+                     "colorize": colorize.available(), "quality_high": registry.model_path("realesrgan-x4plus").is_file(),
+                     "red_eye": True, "geometry": True, "scratches": True},
     }
 
 
@@ -134,6 +146,10 @@ def plan(req: JobRequest):
 
 @router.post("/jobs", status_code=202)
 def create_job(req: JobRequest):
+    if req.colorize and not colorize.available():
+        raise AppError("Falta el modelo de colorización. Ejecuta scripts/descargar_modelos.sh.", 503, "model_missing")
+    if req.quality == "alta" and req.upscale and not registry.model_path("realesrgan-x4plus").is_file():
+        raise AppError("Falta el modelo de calidad alta. Ejecuta scripts/descargar_modelos.sh.", 503, "model_missing")
     if req.faces and not face_restore.available():
         raise AppError("Faltan los modelos de rostros. Ejecuta scripts/descargar_modelos.sh.", 503, "model_missing")
     if req.upscale and not registry.model_path("realesr-general-x4v3").is_file():
@@ -192,3 +208,59 @@ def job_export(job_id: str, req: ExportRequest):
 def clear_data():
     get_store().clear_all()
     return Response(status_code=204)
+
+
+class CropBox(BaseModel):
+    x: float = Field(ge=0, lt=1)
+    y: float = Field(ge=0, lt=1)
+    w: float = Field(gt=0, le=1)
+    h: float = Field(gt=0, le=1)
+
+
+class TransformRequest(BaseModel):
+    rotate: Literal[0, 90, 180, 270] = 0
+    angle: float = Field(0.0, ge=-45, le=45)
+    crop: Optional[CropBox] = None
+
+
+def _derive(parent_id: str, rgb_fn):
+    """Crea una imagen NUEVA a partir de la actual (el original y las versiones anteriores no se tocan)."""
+    import io as _io
+
+    store = get_store()
+    rec = store.get_image(parent_id)
+    out = rgb_fn(store.load_working(rec))
+    buf = _io.BytesIO()
+    image_io.array_to_pil(out).save(buf, "PNG", compress_level=1)
+    new_rec, rgb = store.add_image(buf.getvalue(), rec.name)
+    return _image_json(new_rec, rgb)
+
+
+@router.post("/images/{image_id}/transform")
+def transform_image(image_id: str, req: TransformRequest):
+    crop = (req.crop.x, req.crop.y, req.crop.w, req.crop.h) if req.crop else None
+    return _derive(image_id, lambda rgb: geometry.transform(rgb, req.rotate, req.angle, crop))
+
+
+@router.post("/images/{image_id}/inpaint")
+def inpaint_image(image_id: str, mask: UploadFile = File(...)):
+    if not inpaint.available():
+        raise AppError("Falta el modelo para borrar objetos. Ejecuta scripts/descargar_modelos.sh.", 503, "model_missing")
+    import io as _io
+
+    import numpy as np
+
+    data = mask.file.read(20 * 1024 * 1024 + 1)
+    if not data or len(data) > 20 * 1024 * 1024:
+        raise AppError("La máscara no es válida.", 400, "bad_mask")
+    try:
+        m = Image.open(_io.BytesIO(data)).convert("L")
+    except Exception:
+        raise AppError("La máscara no es una imagen válida.", 415, "bad_mask")
+
+    def run(rgb):
+        h, w = rgb.shape[:2]
+        mm = np.asarray(m.resize((w, h), Image.BILINEAR)) > 127
+        return inpaint.get_inpainter().remove(rgb, mm)
+
+    return _derive(image_id, run)

@@ -14,7 +14,15 @@ from ..core.errors import AppError
 
 Image.MAX_IMAGE_PIXELS = settings.max_input_pixels * 2  # aviso de PIL antes de nuestro límite duro
 
-ALLOWED_FORMATS = {"JPEG": "jpg", "PNG": "png", "WEBP": "webp"}
+try:  # HEIC/HEIF de iPhone (pillow-heif, BSD-3; incluye libheif LGPL en sus ruedas)
+    from pillow_heif import register_heif_opener
+
+    register_heif_opener()
+    HEIC_OK = True
+except Exception:  # pragma: no cover
+    HEIC_OK = False
+
+ALLOWED_FORMATS = {"JPEG": "jpg", "PNG": "png", "WEBP": "webp", "TIFF": "tif", "HEIF": "heic"}
 EXPORT_FORMATS = {"jpeg": ("JPEG", "jpg"), "png": ("PNG", "png"), "webp": ("WEBP", "webp")}
 GPS_IFD_TAG = 0x8825
 ORIENTATION_TAG = 0x0112
@@ -31,9 +39,9 @@ def validate_and_open(data: bytes) -> Image.Image:
         fmt = probe.format
         probe.verify()
     except (UnidentifiedImageError, Image.DecompressionBombError, OSError, SyntaxError, ValueError):
-        raise AppError("El archivo no es una imagen válida (se admiten JPEG, PNG y WebP).", 415, "invalid_image")
+        raise AppError("El archivo no es una imagen válida (se admiten JPEG, PNG, WebP, TIFF y HEIC).", 415, "invalid_image")
     if fmt not in ALLOWED_FORMATS:
-        raise AppError("Formato no admitido. Usa JPEG, PNG o WebP.", 415, "unsupported_format")
+        raise AppError("Formato no admitido. Usa JPEG, PNG, WebP, TIFF o HEIC.", 415, "unsupported_format")
     img = Image.open(io.BytesIO(data))
     if img.width * img.height > settings.max_input_pixels:
         raise AppError(

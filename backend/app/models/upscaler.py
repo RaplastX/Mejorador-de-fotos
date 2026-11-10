@@ -10,6 +10,7 @@ import torch
 from ..core.config import settings
 from ..core.errors import AppError, Cancelled
 from .registry import MODELS, model_path, sha256_of
+from .rrdbnet import RRDBNet
 from .srvgg import SRVGGNetCompact
 
 _lock = threading.Lock()
@@ -58,9 +59,12 @@ class Upscaler:
         if settings.torch_threads > 0:
             torch.set_num_threads(settings.torch_threads)
         self.device = pick_device()
-        net = SRVGGNetCompact(3, 3, num_feat=64, num_conv=32, upscale=4, act_type="prelu")
+        if key == "realesrgan-x4plus":
+            net = RRDBNet(3, 3, num_feat=64, num_block=23, num_grow_ch=32)
+        else:
+            net = SRVGGNetCompact(3, 3, num_feat=64, num_conv=32, upscale=4, act_type="prelu")
         state = torch.load(path, map_location="cpu", weights_only=True)
-        net.load_state_dict(state["params"] if "params" in state else state, strict=True)
+        net.load_state_dict(state["params_ema"] if "params_ema" in state else state["params"] if "params" in state else state, strict=True)
         self.net = net.eval().to(self.device)
 
     @torch.inference_mode()

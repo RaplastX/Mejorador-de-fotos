@@ -9,3 +9,4 @@ models/*.onnx
 data/
 *.log
 *.tsbuildinfo
+models/*.pt

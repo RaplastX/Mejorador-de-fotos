@@ -10,7 +10,7 @@ import numpy as np
 from ..core.config import settings
 from ..core.errors import AppError, Cancelled
 from ..models.upscaler import get_upscaler
-from . import basic
+from . import basic, oldphoto
 
 INTENSITY = {  # presets: (denoise, color, sharpen)
     "suave": (0.25, 0.25, 0.25),
@@ -36,6 +36,13 @@ class Options:
     skin_smooth: float = 0.35
     skin_wrinkles: float = 0.35
     keep_texture: bool = True
+    quality: str = "rapida"  # rapida (compacto) | alta (RRDBNet, ~12x más lento)
+    shadows: float = 0.0  # -1..1
+    highlights: float = 0.0  # -1..1
+    redeye: bool = False
+    scratches: float = 0.0  # 0 = desactivado; 0..1 intensidad de limpieza de rayones/polvo
+    colorize: bool = False
+    colorize_strength: float = 1.0
     exclude_faces: tuple = ()  # cajas (x, y, w, h) en coordenadas de la imagen ORIGINAL
 
     def resolved(self) -> tuple[float, float, float]:
@@ -68,6 +75,12 @@ def plan_output(width: int, height: int, opts: Options) -> dict:
         warnings.append("El factor supera 4×: se aplica 4× con IA y el resto con interpolación; el detalle extra no es real.")
     if generative and long_side < 600 and factor >= 3:
         warnings.append("La imagen original es muy pequeña: el resultado a gran resolución reconstruye detalles de forma aproximada.")
+    if opts.colorize:
+        warnings.append("La colorización es generativa: los colores son una suposición plausible, no los colores reales de la escena.")
+    if opts.scratches > 0:
+        warnings.append("La limpieza de rayones y polvo es automática: revisa el resultado, un detalle fino y largo real podría confundirse con un rayón.")
+    if opts.quality == "alta" and opts.upscale:
+        warnings.append("Calidad alta usa un modelo ~12 veces más lento en CPU y la mejora frente a la rápida suele ser pequeña.")
     if opts.skin:
         warnings.append("El retoque de piel es edición clásica y subjetiva: úsalo con intensidad baja para conservar poros, lunares y rasgos. Solo actúa donde se detecta un rostro frontal.")
     if opts.faces:
@@ -99,17 +112,28 @@ def run(
         if cancelled():
             raise Cancelled()
 
-    progress(0.02, "Reduciendo ruido")
+    if opts.scratches > 0:
+        progress(0.01, "Limpiando rayones y polvo")
+        img, _ = oldphoto.remove_damage(img, opts.scratches)
+        check()
+    if opts.colorize:
+        from ..services import colorize
+
+        progress(0.03, "Colorizando")
+        img = colorize.get_colorizer().colorize(img, opts.colorize_strength)
+        check()
+    progress(0.06, "Reduciendo ruido")
     # Si habrá superresolución, el modelo ya suaviza ruido: se aplica denoise más ligero para no perder detalle.
     img = basic.denoise(img, dn * (0.6 if plan["factor"] > 1.0 else 1.0))
     check()
     progress(0.10, "Corrigiendo exposición y color")
     img = basic.auto_color(img, col)
+    img = basic.shadows_highlights(img, opts.shadows, opts.highlights)
     check()
 
     factor = plan["factor"]
     if factor > 1.0:
-        up = get_upscaler()
+        up = get_upscaler("realesrgan-x4plus" if opts.quality == "alta" else "realesr-general-x4v3")
         progress(0.15, "Superresolución con IA")
         img = up.upscale(
             img,
@@ -124,6 +148,12 @@ def run(
             img = cv2.resize(img, (tw, th), interpolation=interp)
         # Tras la SR ya hay nitidez; se aplica un refuerzo menor para no crear halos.
         shp *= 0.5
+    if opts.redeye:
+        from ..services import faces as face_det
+        from . import redeye
+
+        progress(0.925, "Corrigiendo ojos rojos")
+        img, _ = redeye.fix_red_eye(img, face_det.detect_faces(img))
     if opts.faces:
         from ..services import face_restore
 

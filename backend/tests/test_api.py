@@ -29,7 +29,9 @@ def test_system_is_local_and_private(client):
     from backend.app.services import face_restore
 
     assert j["features"]["face_restoration"] is face_restore.available()  # solo se anuncia lo que existe de verdad
-    assert j["features"]["inpainting"] is False  # aún no implementado
+    from backend.app.services import inpaint
+
+    assert j["features"]["inpainting"] is inpaint.available()
 
 
 def test_rejects_invalid_and_unsupported(client):
