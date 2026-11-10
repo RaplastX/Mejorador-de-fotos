@@ -29,7 +29,13 @@ Aplicación **local y privada** de mejora fotográfica con IA para uso personal 
 | Corrección de perspectiva, colorización por zonas, selección con lazo | ⏳ No implementado |
 | Empaquetado como instalador (Tauri) | ⏳ Fase 5 |
 
-## Instalación (Linux/macOS; Windows: usa WSL o ejecuta los mismos pasos a mano)
+## Solo con el móvil (sin PC): Google Colab
+Ver **`docs/GUIA_MOVIL_COLAB.md`** y `notebooks/luma_colab.ipynb` (GPU gratuita con tu cuenta de Google; **sin probar de extremo a extremo**, con cuotas de Google).
+
+## Windows
+Ver **`docs/GUIA_WINDOWS.md`** (`instalar.bat`, `iniciar.bat`, `iniciar-movil.bat`; sin probar en Windows real).
+
+## Instalación (Linux/macOS)
 
 Requisitos: Python 3.10+ y Node 20+ (Node solo para compilar la interfaz una vez).
 
@@ -45,6 +51,9 @@ Tras instalar, **funciona sin conexión**. Diagnóstico: `scripts/diagnostico.sh
 
 ### Variables opcionales
 `LUMA_PORT`, `LUMA_DEVICE=cpu|cuda|auto`, `LUMA_TILE` (tamaño de mosaico, baja si falta memoria), `LUMA_MAX_OUTPUT_PIXELS`, `LUMA_THREADS`, `LUMA_DATA_DIR`.
+
+## Sobre Google Flow / Gemini
+La app **no** usa cuentas de Google: Flow no tiene API y no se pedirá nunca correo ni contraseña.
 
 ## Uso desde el móvil (el PC hace el trabajo, sin límites ni cuotas)
 No existe ninguna API en la nube gratuita y sin límites para esto, y las suscripciones (p. ej. Google AI Pro/Flow) no dan acceso a API. La opción gratuita e ilimitada es tu propio PC (con GPU NVIDIA si la hay):

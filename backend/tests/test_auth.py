@@ -36,3 +36,18 @@ def test_local_mode_has_no_auth_but_rejects_foreign_host(monkeypatch, tmp_path):
     with TestClient(create_app(), base_url="http://localhost") as c:
         assert c.get("/api/system").status_code == 200
         assert c.get("/api/system", headers={"host": "evil.example"}).status_code == 400
+
+
+def test_tunnel_launcher_helpers_and_loopback_bind(monkeypatch):
+    import importlib
+
+    monkeypatch.setenv("LUMA_BIND", "127.0.0.1")
+    monkeypatch.setenv("LUMA_REMOTE", "1")
+    cfg = importlib.import_module("backend.app.core.config")
+    assert cfg.Settings().host == "127.0.0.1"  # tras el túnel, solo el túnel llega al servidor
+    from backend import launch_tunnel as lt
+
+    line = "2026-11-10 INF |  https://calm-river-demo-1234.trycloudflare.com  |"
+    assert lt.find_tunnel_url(line) == "https://calm-river-demo-1234.trycloudflare.com"
+    assert lt.find_tunnel_url("sin url aquí") is None
+    assert lt.pairing_link("https://x.trycloudflare.com/", "TOK") == "https://x.trycloudflare.com/pair?t=TOK"

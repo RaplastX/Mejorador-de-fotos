@@ -15,3 +15,9 @@
 - El service worker cachea solo la carcasa de la app, nunca fotos ni respuestas de `/api`.
 - Sin limitación de intentos contra fuerza bruta del token (inviable por su longitud, pero no hay bloqueo).
 - No se usa ninguna cuenta de terceros ni API en la nube.
+
+## Modo túnel / Colab (`python -m backend.launch_tunnel`)
+- Rompe la regla de «las fotos no salen de tu equipo»: viajan a la máquina de Colab (cuenta de Google del usuario) y el tráfico HTTPS atraviesa la red de Cloudflare, que termina el cifrado en su borde y técnicamente podría verlo. Úsalo solo si lo aceptas.
+- El servidor escucha solo en 127.0.0.1; únicamente el túnel llega a él, y todo exige el token (256 bits).
+- Las fotos y temporales viven en el disco de la sesión de Colab y se pierden al cerrarla.
+- `cloudflared` se descarga de github.com/cloudflare/cloudflared sin verificar checksum (no automatizado).

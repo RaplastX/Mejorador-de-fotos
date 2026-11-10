@@ -23,7 +23,7 @@ class Settings:
     frontend_dist: Path = field(default_factory=lambda: REPO_ROOT / "frontend" / "dist")
     # Por defecto solo local. LUMA_REMOTE=1 abre el servidor a la red local/VPN y EXIGE token de emparejamiento.
     remote: bool = os.environ.get("LUMA_REMOTE", "0") == "1"
-    host: str = field(default_factory=lambda: "0.0.0.0" if os.environ.get("LUMA_REMOTE", "0") == "1" else "127.0.0.1")
+    host: str = field(default_factory=lambda: os.environ.get("LUMA_BIND") or ("0.0.0.0" if os.environ.get("LUMA_REMOTE", "0") == "1" else "127.0.0.1"))
     port: int = int(os.environ.get("LUMA_PORT", "8765"))
     max_upload_bytes: int = 60 * 1024 * 1024
     max_input_pixels: int = 60_000_000  # 60 MP
