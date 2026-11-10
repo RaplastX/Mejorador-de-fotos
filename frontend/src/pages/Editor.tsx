@@ -1,13 +1,21 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import Compare from "../components/Compare";
-import Controls, { defaultSettings, toOptions, type Settings } from "../components/Controls";
+import Controls, { defaultSettings, effective, toOptions, type Settings } from "../components/Controls";
+import CropTool from "../components/CropTool";
+import EraseTool from "../components/EraseTool";
 import { api, fmtBytes, type ExportOptions, type ImageInfo, type Job, type Plan, type SystemInfo } from "../services/api";
 
 interface Version { job: Job; settings: Settings }
 
 const CHIP: Record<string, string> = { baja: "Resolución baja", media: "Resolución media", alta: "Resolución alta" };
 
-export default function Editor({ info, system, onBack }: { info: ImageInfo; system: SystemInfo | null; onBack: () => void }) {
+const NO_FEATURES: Record<string, boolean> = {};
+export type Tool = "mejorar" | "recortar" | "borrar";
+
+interface EditorProps { info: ImageInfo; system: SystemInfo | null; initialTool: Tool; onBack: () => void; onReplace: (i: ImageInfo, tool: Tool) => void; onPrevImage?: (tool: Tool) => void }
+
+export default function Editor({ info, system, initialTool, onBack, onReplace, onPrevImage }: EditorProps) {
+  const [tool, setTool] = useState<Tool>(initialTool);
   const [settings, setSettings] = useState<Settings>(defaultSettings);
   const [versions, setVersions] = useState<Version[]>([]);
   const [idx, setIdx] = useState(-1); // -1 = solo original
@@ -18,23 +26,22 @@ export default function Editor({ info, system, onBack }: { info: ImageInfo; syst
   const [exp, setExp] = useState<ExportOptions>({ format: "jpeg", quality: 92, keep_metadata: false, keep_gps: false });
   const [exportMsg, setExportMsg] = useState<string | null>(null);
   const abort = useRef<AbortController | null>(null);
-  const srAvailable = system?.features.upscale ?? false;
-  const faceAvailable = system?.features.face_restoration ?? false;
+  const features = system?.features ?? NO_FEATURES;
   const cur = idx >= 0 ? versions[idx] : null;
 
   useEffect(() => {
     const t = setTimeout(() => {
-      api.plan(toOptions(info.id, { ...settings, upscale: settings.upscale && srAvailable, faces: settings.faces && faceAvailable }, info.faces))
+      api.plan(toOptions(info.id, effective(settings, features), info.faces))
         .then((p) => { setPlan(p); setPlanError(null); }).catch((e: Error) => { setPlan(null); setPlanError(e.message); });
     }, 150);
     return () => clearTimeout(t);
-  }, [settings, info, srAvailable, faceAvailable]);
+  }, [settings, info, features]);
 
   const run = useCallback(async () => {
     setError(null); setExportMsg(null);
     abort.current = new AbortController();
     try {
-      const job = await api.createJob(toOptions(info.id, { ...settings, upscale: settings.upscale && srAvailable, faces: settings.faces && faceAvailable }, info.faces));
+      const job = await api.createJob(toOptions(info.id, effective(settings, features), info.faces));
       setRunning(job);
       const done = await api.wait(job.id, setRunning, abort.current.signal);
       if (done.status === "done") {
@@ -42,7 +49,7 @@ export default function Editor({ info, system, onBack }: { info: ImageInfo; syst
       } else if (done.status === "error") setError(done.error);
     } catch (e) { setError((e as Error).message); }
     finally { setRunning(null); }
-  }, [info, settings, srAvailable, faceAvailable, idx]);
+  }, [info, settings, features, idx]);
 
   const cancel = async () => { if (running) { abort.current?.abort(); await api.cancel(running.id).catch(() => undefined); } };
 
@@ -56,18 +63,42 @@ export default function Editor({ info, system, onBack }: { info: ImageInfo; syst
     } catch (e) { setExportMsg((e as Error).message); }
   };
 
+  const saveAll = async () => {
+    setExportMsg("Exportando versiones…");
+    try {
+      for (let i = 0; i < versions.length; i++) {
+        const r = await api.exportJob(versions[i].job.id, exp);
+        const a = document.createElement("a"); a.href = URL.createObjectURL(r.blob); a.download = r.name.replace(/(\.[a-z]+)$/i, `_v${i + 1}$1`); a.click(); URL.revokeObjectURL(a.href);
+        await new Promise((ok) => setTimeout(ok, 350)); // el navegador puede pedir permiso para varias descargas
+      }
+      setExportMsg(`Se exportaron ${versions.length} versiones.`);
+    } catch (e) { setExportMsg((e as Error).message); }
+  };
+
   const an = info.analysis;
   return (
-    <div className="grid grid-cols-1 gap-4 p-3 pb-[max(1rem,env(safe-area-inset-bottom))] lg:h-full lg:grid-cols-[1fr_340px] lg:p-4">
+    <div className={`grid grid-cols-1 gap-4 p-3 pb-[max(1rem,env(safe-area-inset-bottom))] lg:h-full lg:p-4 ${tool === "mejorar" ? "lg:grid-cols-[1fr_340px]" : ""}`}>
       <div className="flex flex-col gap-3 lg:min-h-[55vh]">
         <div className="flex flex-wrap items-center gap-2">
           <button className="btn-ghost" onClick={onBack}>← Inicio</button>
           <span className="truncate text-sm text-ink-300">{info.name} · {info.width}×{info.height} · {info.format} · {fmtBytes(info.size)}</span>
           <span className="flex-1" />
-          <button className="btn-ghost" disabled={idx < 0 || !!running} onClick={() => setIdx(idx - 1)} aria-label="Deshacer">↶ Deshacer</button>
-          <button className="btn-ghost" disabled={idx >= versions.length - 1 || !!running} onClick={() => setIdx(idx + 1)} aria-label="Rehacer">↷ Rehacer</button>
+          {onPrevImage && <button className="btn-ghost" disabled={!!running} onClick={() => onPrevImage(tool)} title="Vuelve a la imagen anterior a un recorte, giro o borrado">⟲ Imagen anterior</button>}
+          {tool === "mejorar" && (
+            <>
+              <button className="btn-ghost" disabled={idx < 0 || !!running} onClick={() => setIdx(idx - 1)} aria-label="Deshacer">↶ Deshacer</button>
+              <button className="btn-ghost" disabled={idx >= versions.length - 1 || !!running} onClick={() => setIdx(idx + 1)} aria-label="Rehacer">↷ Rehacer</button>
+            </>
+          )}
         </div>
-        <div className="relative h-[58vh] min-h-0 lg:h-auto lg:flex-1">
+        <div className="grid grid-cols-3 gap-1 rounded-xl bg-ink-800 p-1" role="tablist" aria-label="Herramientas">
+          {([["mejorar", "Mejorar"], ["recortar", "Recortar y girar"], ["borrar", "Borrar objetos"]] as const).map(([k, t]) => (
+            <button key={k} role="tab" aria-selected={tool === k} disabled={!!running} onClick={() => setTool(k)} className={`rounded-lg px-2 py-1.5 text-sm ${tool === k ? "bg-amber-glow font-semibold text-black" : "text-ink-300 hover:bg-ink-700"}`}>{t}</button>
+          ))}
+        </div>
+        {tool === "recortar" && <div className="min-h-0 flex-1"><CropTool info={info} onReplace={(n) => onReplace(n, tool)} /></div>}
+        {tool === "borrar" && <div className="min-h-0 flex-1"><EraseTool info={info} enabled={!!features.inpainting} onReplace={(n) => onReplace(n, tool)} /></div>}
+        {tool === "mejorar" && <div className="relative h-[58vh] min-h-0 lg:h-auto lg:flex-1">
           {cur ? <Compare before={api.imageUrl(info.id)} after={api.jobUrl(cur.job.id)} />
             : <div className="checker flex h-full items-center justify-center rounded-xl border border-ink-700"><img src={api.imageUrl(info.id)} alt="Fotografía original" className="max-h-full max-w-full object-contain" /></div>}
           {running && (
@@ -80,12 +111,22 @@ export default function Editor({ info, system, onBack }: { info: ImageInfo; syst
               </div>
             </div>
           )}
-        </div>
-        {cur && <p className="label">Resultado {cur.job.result?.width}×{cur.job.result?.height} px · procesado en {cur.job.seconds} s · vista en pantalla reducida a 2048 px; la exportación usa la resolución completa.{cur.job.plan.generative && " Escalado generativo: el detalle añadido es una reconstrucción aproximada."}</p>}
+        </div>}
+        {tool === "mejorar" && versions.length > 0 && (
+          <div className="flex flex-wrap items-center gap-1.5 text-xs" aria-label="Versiones">
+            <span className="label">Versiones:</span>
+            <button className={`rounded-full border px-2.5 py-1 ${idx < 0 ? "border-amber-glow bg-amber-glow font-semibold text-black" : "border-ink-700 bg-ink-800"}`} disabled={!!running} onClick={() => setIdx(-1)}>Original</button>
+            {versions.map((v, i) => (
+              <button key={v.job.id} className={`rounded-full border px-2.5 py-1 ${idx === i ? "border-amber-glow bg-amber-glow font-semibold text-black" : "border-ink-700 bg-ink-800"}`} disabled={!!running} onClick={() => setIdx(i)}>v{i + 1} · {v.job.result?.width}×{v.job.result?.height}</button>
+            ))}
+            <button className="btn-ghost text-xs" disabled={!!running} onClick={saveAll}>Guardar todas</button>
+          </div>
+        )}
+        {tool === "mejorar" && cur && <p className="label">Resultado {cur.job.result?.width}×{cur.job.result?.height} px · procesado en {cur.job.seconds} s · vista en pantalla reducida a 2048 px; la exportación usa la resolución completa.{cur.job.plan.generative && " Escalado generativo: el detalle añadido es una reconstrucción aproximada."}</p>}
         {error && <p role="alert" className="rounded-lg border border-red-500/40 bg-red-500/10 p-3 text-sm text-red-200">{error}</p>}
       </div>
 
-      <aside className="card flex flex-col gap-5 p-4 lg:max-h-full lg:overflow-y-auto" aria-label="Panel de herramientas">
+      {tool === "mejorar" && <aside className="card flex flex-col gap-5 p-4 lg:max-h-full lg:overflow-y-auto" aria-label="Panel de herramientas">
         <section aria-labelledby="diag">
           <h2 id="diag" className="mb-2 text-sm font-semibold">Diagnóstico</h2>
           <div className="flex flex-wrap gap-1.5 text-xs">
@@ -94,7 +135,7 @@ export default function Editor({ info, system, onBack }: { info: ImageInfo; syst
           <ul className="label mt-2 list-disc space-y-1 pl-4">{an.recommendations.map((r) => <li key={r}>{r}</li>)}</ul>
         </section>
 
-        <Controls s={settings} set={setSettings} plan={plan} planError={planError} srAvailable={srAvailable} faceAvailable={faceAvailable} image={info} />
+        <Controls s={settings} set={setSettings} plan={plan} planError={planError} features={features} image={info} />
         <button className="btn" disabled={!!running || !!planError} onClick={run}>{running ? "Procesando…" : cur ? "Aplicar de nuevo" : "Mejorar imagen"}</button>
 
         <section className="space-y-3 border-t border-ink-700 pt-4" aria-labelledby="exp">
@@ -114,7 +155,7 @@ export default function Editor({ info, system, onBack }: { info: ImageInfo; syst
           {!cur && <p className="label">Mejora la imagen para poder exportarla. El original nunca se modifica.</p>}
           {exportMsg && <p className="label" aria-live="polite">{exportMsg}</p>}
         </section>
-      </aside>
+      </aside>}
     </div>
   );
 }

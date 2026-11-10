@@ -23,8 +23,8 @@ export default function Home({ onFiles, onOpen, busy, error }: Props) {
         className={`card flex flex-col items-center gap-4 border-dashed p-12 text-center transition ${over ? "border-amber-glow bg-ink-800" : ""}`}
       >
         <button className="btn px-8 py-4 text-lg" disabled={busy} onClick={() => input.current?.click()}>{busy ? "Analizando…" : "Mejorar fotografía"}</button>
-        <p className="label">o arrastra aquí una o varias imágenes · JPEG, PNG o WebP · varias a la vez usan el modo por lotes</p>
-        <input ref={input} type="file" multiple accept="image/jpeg,image/png,image/webp" className="hidden" aria-label="Elegir fotografías"
+        <p className="label">o arrastra aquí una o varias imágenes · JPEG, PNG, WebP, TIFF o HEIC · varias a la vez usan el modo por lotes</p>
+        <input ref={input} type="file" multiple accept="image/jpeg,image/png,image/webp,image/tiff,image/heic,image/heif" className="hidden" aria-label="Elegir fotografías"
           onChange={(e) => { const f = [...(e.target.files ?? [])]; if (f.length) onFiles(f); e.target.value = ""; }} />
         {error && <p role="alert" className="rounded-lg border border-red-500/40 bg-red-500/10 px-4 py-2 text-sm text-red-200">{error}</p>}
       </div>

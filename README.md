@@ -4,7 +4,7 @@ Aplicación **local y privada** de mejora fotográfica con IA para uso personal 
 
 > Nombre centralizado en `backend/app/core/config.py` (`APP_NAME`) y `frontend/src/brand.ts`.
 
-## Estado real de las funciones (v0.2.0)
+## Estado real de las funciones (v0.3.0)
 
 | Función | Estado |
 |---|---|
@@ -19,8 +19,14 @@ Aplicación **local y privada** de mejora fotográfica con IA para uso personal 
 | Restauración facial con IA (GFPGAN v1.4): intensidad, y activar/desactivar cada rostro | ✅ Completa (probada) |
 | Retoque natural de piel y arrugas (edición clásica, conserva textura, intensidades independientes) | ✅ Completa (probada en un rostro frontal) |
 | Uso desde el móvil (Android/iPhone) como app instalable (PWA), con el PC como motor y emparejamiento por token | ✅ Probada en iPhone emulado; **no probada en un móvil físico** |
-| Foto antigua: eliminar rayones, colorización | ⏳ Pendiente (los rayones se ven) |
-| Eliminación de objetos (inpainting), recorte/enderezado, presets, HEIC/TIFF | ⏳ Pendiente |
+| Foto antigua: quitar rayones finos y polvo (clásico) | ✅ Probada con rayones simulados verticales; no detecta diagonales ni daños grandes |
+| Colorización con IA (DDColor) | ✅ Probada; los colores son inventados (plausibles, no reales) |
+| Borrar objetos con pincel (LaMa) | ✅ Probada; solo cambia la zona marcada |
+| Recortar (proporciones), rotar 90° y enderezar; «Imagen anterior» para volver | ✅ Probada en navegador |
+| Sombras/luces, ojos rojos, modelo de calidad alta (RealESRGAN_x4plus) | ✅ Sombras/luces y calidad alta probadas; ojos rojos solo con pupilas pintadas, no con fotos reales |
+| Presets (5 incluidos + los tuyos, guardados en el navegador), versiones y «Guardar todas» | ✅ Presets probados en navegador; «Guardar todas» sin probar |
+| Entrada TIFF y HEIC (iPhone) | ✅ Probada con archivos generados; no con un HEIC real de iPhone |
+| Corrección de perspectiva, colorización por zonas, selección con lazo | ⏳ No implementado |
 | Empaquetado como instalador (Tauri) | ⏳ Fase 5 |
 
 ## Instalación (Linux/macOS; Windows: usa WSL o ejecuta los mismos pasos a mano)
@@ -35,7 +41,7 @@ scripts/iniciar.sh         # abre http://127.0.0.1:8765
 Tras instalar, **funciona sin conexión**. Diagnóstico: `scripts/diagnostico.sh`.
 
 ### Modelos
-`scripts/descargar_modelos.sh` descarga desde releases oficiales de GitHub, verificando SHA-256: Real-ESRGAN (5 MB) y, salvo `--sin-rostros`, GFPGAN v1.4 + RetinaFace + ParseNet (~540 MB en total). Nada se descarga por su cuenta al usar la app. Para actualizarlo, cambia URL y checksum en `backend/app/models/registry.py` y en el script. Los pesos no se incluyen en el repositorio.
+`scripts/descargar_modelos.sh` descarga desde releases oficiales de GitHub, verificando SHA-256: todos los modelos (~1,0 GB: superresolución rápida y alta, rostros, borrar objetos, colorización). Con `--minimo` solo baja la superresolución rápida (5 MB) y el resto de funciones aparecen como no instaladas. DDColor se descarga de huggingface.co. Nada se descarga por su cuenta al usar la app. Para actualizarlo, cambia URL y checksum en `backend/app/models/registry.py` y en el script. Los pesos no se incluyen en el repositorio.
 
 ### Variables opcionales
 `LUMA_PORT`, `LUMA_DEVICE=cpu|cuda|auto`, `LUMA_TILE` (tamaño de mosaico, baja si falta memoria), `LUMA_MAX_OUTPUT_PIXELS`, `LUMA_THREADS`, `LUMA_DATA_DIR`.
@@ -73,7 +79,9 @@ Galería de resultados reales: ver la página publicada (también reproducible c
 - Sin GPU, 4K es lento (ver `docs/RENDIMIENTO.md`).
 - La superresolución **reconstruye** detalle plausible; no recupera información inexistente. Con fuentes muy comprimidas puede dibujar halos y texturas "pintadas" en rostros.
 - La restauración facial reconstruye rasgos: con intensidad alta puede alterar ligeramente la expresión; usa 50–70 %. Solo actúa en rostros frontales detectados (el retoque de piel usa un detector Haar, menos robusto con perfiles o caras pequeñas).
-- El modelo compacto prioriza velocidad; un modelo más grande (RealESRGAN_x4plus, SwinIR, HAT) daría más calidad pero no está integrado.
+- **Una foto muy desenfocada mejora poco**: el detalle que no existe no se recupera (comprobado con una imagen real muy borrosa, también con el modelo de calidad alta).
+- El modelo de calidad alta es ~12× más lento en CPU y en las pruebas la diferencia frente al rápido fue pequeña.
+- Recortar, girar y borrar objetos crean una imagen nueva guardada como PNG: los metadatos EXIF del original no se conservan en esas imágenes.
 - La vista en pantalla se reduce a 2048 px; la exportación usa la resolución completa.
 - Los trabajos y temporales viven solo mientras el servidor está activo (se borran al cerrarlo).
 - Auditoría npm: 0 vulnerabilidades en dependencias de producción; hay avisos en herramientas de desarrollo (no van en la app compilada).

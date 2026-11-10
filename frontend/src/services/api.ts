@@ -10,6 +10,7 @@ export interface Plan { factor: number; width: number; height: number; generativ
 export interface JobOptions {
   image_id: string; intensity: "suave" | "equilibrada" | "intensa"; denoise?: number; color?: number; sharpen?: number;
   upscale: boolean; target: "original" | "1080p" | "2k" | "4k"; scale: number;
+  quality?: "rapida" | "alta"; shadows?: number; highlights?: number; redeye?: boolean; scratches?: number; colorize?: boolean; colorize_strength?: number;
   faces?: boolean; face_strength?: number; skin?: boolean; skin_smooth?: number; skin_wrinkles?: number; keep_texture?: boolean; exclude_faces?: { x: number; y: number; w: number; h: number }[];
 }
 export interface Job {
@@ -48,6 +49,9 @@ export const api = {
   createJob: (o: JobOptions) => call<Job>("/api/jobs", json("POST", o)),
   job: (id: string) => call<Job>(`/api/jobs/${id}`),
   cancel: (id: string) => call<Job>(`/api/jobs/${id}`, { method: "DELETE" }),
+  transform: (id: string, body: { rotate?: number; angle?: number; crop?: { x: number; y: number; w: number; h: number } | null }) => call<ImageInfo>(`/api/images/${id}/transform`, json("POST", body)),
+  inpaint(id: string, mask: Blob) { const f = new FormData(); f.append("mask", mask, "mask.png"); return call<ImageInfo>(`/api/images/${id}/inpaint`, { method: "POST", body: f }); },
+  info: (id: string) => call<ImageInfo>(`/api/images/${id}`),
   deleteImage: (id: string) => call<void>(`/api/images/${id}`, { method: "DELETE" }),
   clearAll: () => call<void>("/api/data", { method: "DELETE" }),
   imageUrl: (id: string) => `/api/images/${id}/display`,

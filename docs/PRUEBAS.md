@@ -1,8 +1,13 @@
-# Pruebas ejecutadas (2026-11-10, v0.2.0)
+# Pruebas ejecutadas (2026-11-10, v0.3.0)
 
 | Prueba | Resultado |
 |---|---|
-| `pytest` (27 tests: API, formatos, seguridad, mosaicos, rostros, piel, autenticación móvil) | ✅ 27 passed |
+| `pytest` (37 tests: lo anterior + rayones, geometría, sombras, colorización, borrado, ojos rojos, TIFF/HEIC, endpoints nuevos) | ✅ 37 passed |
+| Rayones: atenúa los simulados y una foto sana casi no cambia (diff medio < 0,0015) | ✅ |
+| Colorización: añade color y conserva la luminancia | ✅ |
+| Borrado: 0 píxeles cambian lejos de la máscara | ✅ |
+| E2E navegador: preset «Antigua en color», guardar preset, recortar 16:9 (600×400→600×338), rotar (→338×600), «Imagen anterior» dos veces, pintar con pincel y borrar | ✅ sin errores de consola ni peticiones externas |
+| Imagen real del usuario (512×512, muy desenfocada) | ⚠ mejora pequeña con ambos modelos; documentado como limitación |
 | Rostros: GFPGAN cambia el rostro, la exclusión por rostro lo protege (cambio 0,0038 → 0,0004) | ✅ |
 | Piel: no toca nada fuera del rostro, conserva el tono medio, «conservar textura» retiene más detalle | ✅ |
 | Modo móvil: 401 sin token, token falso 401, emparejamiento fija cookie HttpOnly/Strict, token 0600 | ✅ |
@@ -24,4 +29,4 @@
 
 **Visto en las pruebas**: la superresolución sola deforma ojos y boca en fuentes muy degradadas y la restauración facial lo corrige; en texto la IA inventa trazos; PSNR/SSIM de Luma son menores que los de bicúbica en ampliaciones (más nitidez inventada), mayores en el caso de poca luz.
 
-**No probado**: GPU, móvil físico, HTTPS con Tailscale, fotos reales de personas (solo imágenes libres de scikit-image), varios rostros reales (se simuló con la imagen duplicada), foto antigua real, texto/líneas finas, HEIC/TIFF, lotes de >1 archivo en navegador, ejecución desde cero con `instalar.sh` en otra máquina, métricas PSNR/SSIM/LPIPS (poco informativas con resultados generativos).
+**No probado**: «Guardar todas», HEIC real de iPhone, ojos rojos en fotos reales, rayones reales o diagonales, herramientas nuevas en pantalla de móvil, GPU, móvil físico, HTTPS con Tailscale, fotos reales de personas (solo imágenes libres de scikit-image), varios rostros reales (se simuló con la imagen duplicada), foto antigua real, texto/líneas finas, HEIC/TIFF, lotes de >1 archivo en navegador, ejecución desde cero con `instalar.sh` en otra máquina, métricas PSNR/SSIM/LPIPS (poco informativas con resultados generativos).

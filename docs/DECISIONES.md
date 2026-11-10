@@ -17,3 +17,11 @@
 - **GFPGAN sin basicsr**: se vendoriza la arquitectura clean con shim. Mezcla ajustable restaurado/original para preservar identidad (en lugar del parámetro interno `weight`).
 - **Retoque de piel clásico, no generativo**: separación de frecuencias en máscara de piel; así no cambia identidad y es reversible (no destructivo, siempre desde el original). Detector Haar para sus cajas (limitación conocida).
 - **Preajustes de color más suaves** tras ver que «equilibrada» sobreactuaba contraste en la galería.
+
+## v0.3.0
+- **Rayones/polvo con visión clásica + inpainting de Telea**, no con un modelo: umbrales adaptados al grano y descarte de puntos junto a bordes reales. Antes de eso marcaba 3–5 % de una foto sana; ahora 0,1–0,9 %. Si marca más del 6 % no toca nada.
+- **Recortar, girar y borrar objetos crean una imagen nueva** en la sesión (no destructivo); el editor guarda una pila para «Imagen anterior». Coste: esas imágenes pierden el EXIF.
+- **LaMa solo procesa un recorte alrededor de la máscara** y pega únicamente la zona marcada: el resto no cambia ni un píxel (verificado por test).
+- **Colorización conserva la luminancia original** a resolución completa; el modelo solo aporta los canales de color.
+- **Presets en `localStorage`** (por navegador/dispositivo), sin base de datos.
+- Un solo script descarga todos los modelos; las funciones cuyo modelo falta se muestran desactivadas con la instrucción para instalarlo.
