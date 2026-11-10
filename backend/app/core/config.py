@@ -6,7 +6,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 APP_NAME = "Luma Enhance"  # nombre provisional: cambiar solo aquí y en frontend/src/brand.ts
-APP_VERSION = "0.3.0"
+APP_VERSION = "0.3.1"
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 

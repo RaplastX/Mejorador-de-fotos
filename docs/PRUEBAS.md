@@ -30,3 +30,12 @@
 **Visto en las pruebas**: la superresolución sola deforma ojos y boca en fuentes muy degradadas y la restauración facial lo corrige; en texto la IA inventa trazos; PSNR/SSIM de Luma son menores que los de bicúbica en ampliaciones (más nitidez inventada), mayores en el caso de poca luz.
 
 **No probado**: «Guardar todas», HEIC real de iPhone, ojos rojos en fotos reales, rayones reales o diagonales, herramientas nuevas en pantalla de móvil, GPU, móvil físico, HTTPS con Tailscale, fotos reales de personas (solo imágenes libres de scikit-image), varios rostros reales (se simuló con la imagen duplicada), foto antigua real, texto/líneas finas, HEIC/TIFF, lotes de >1 archivo en navegador, ejecución desde cero con `instalar.sh` en otra máquina, métricas PSNR/SSIM/LPIPS (poco informativas con resultados generativos).
+
+## Rediseño (v0.3.1)
+| Prueba | Resultado |
+|---|---|
+| Capturas iPhone 13 emulado y 1360 px: portada, editor, barra de acción fija | ✅ revisadas visualmente |
+| E2E recortar 16:9, rotar, imagen anterior ×2, pincel y borrar tras el rediseño | ✅ sin errores de consola |
+| Publicación en Hugging Face Space | ❌ no posible gratis (402 PRO); no se creó nada |
+| Túnel Cloudflare / Colab | ⚠ sin probar (entorno de desarrollo lo bloquea) |
+| Imagen Docker | ⚠ nunca construida (sin demonio Docker) |

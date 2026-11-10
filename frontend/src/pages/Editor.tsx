@@ -77,28 +77,28 @@ export default function Editor({ info, system, initialTool, onBack, onReplace, o
 
   const an = info.analysis;
   return (
-    <div className={`grid grid-cols-1 gap-4 p-3 pb-[max(1rem,env(safe-area-inset-bottom))] lg:h-full lg:p-4 ${tool === "mejorar" ? "lg:grid-cols-[1fr_340px]" : ""}`}>
+    <div className={`grid grid-cols-1 gap-4 p-3 pb-28 lg:h-full lg:p-4 lg:pb-4 ${tool === "mejorar" ? "lg:grid-cols-[1fr_360px]" : ""}`}>
       <div className="flex flex-col gap-3 lg:min-h-[55vh]">
         <div className="flex flex-wrap items-center gap-2">
-          <button className="btn-ghost" onClick={onBack}>← Inicio</button>
-          <span className="truncate text-sm text-ink-300">{info.name} · {info.width}×{info.height} · {info.format} · {fmtBytes(info.size)}</span>
-          <span className="flex-1" />
-          {onPrevImage && <button className="btn-ghost" disabled={!!running} onClick={() => onPrevImage(tool)} title="Vuelve a la imagen anterior a un recorte, giro o borrado">⟲ Imagen anterior</button>}
+          <button className="btn-ghost" onClick={onBack} aria-label="Volver al inicio">← <span className="max-sm:hidden">Inicio</span></button>
+          <span className="min-w-0 flex-1 truncate text-sm text-ink-300 sm:flex-none">{info.name} · {info.width}×{info.height} · {info.format} · {fmtBytes(info.size)}</span>
+          <span className="hidden flex-1 sm:block" />
+          {onPrevImage && <button className="btn-ghost" disabled={!!running} onClick={() => onPrevImage(tool)} title="Vuelve a la imagen anterior a un recorte, giro o borrado" aria-label="Imagen anterior">⟲ <span className="max-sm:hidden">Imagen anterior</span></button>}
           {tool === "mejorar" && (
             <>
-              <button className="btn-ghost" disabled={idx < 0 || !!running} onClick={() => setIdx(idx - 1)} aria-label="Deshacer">↶ Deshacer</button>
-              <button className="btn-ghost" disabled={idx >= versions.length - 1 || !!running} onClick={() => setIdx(idx + 1)} aria-label="Rehacer">↷ Rehacer</button>
+              <button className="btn-ghost" disabled={idx < 0 || !!running} onClick={() => setIdx(idx - 1)} aria-label="Deshacer">↶ <span className="max-sm:hidden">Deshacer</span></button>
+              <button className="btn-ghost" disabled={idx >= versions.length - 1 || !!running} onClick={() => setIdx(idx + 1)} aria-label="Rehacer">↷ <span className="max-sm:hidden">Rehacer</span></button>
             </>
           )}
         </div>
-        <div className="grid grid-cols-3 gap-1 rounded-xl bg-ink-800 p-1" role="tablist" aria-label="Herramientas">
+        <div className="scroll-x" role="tablist" aria-label="Herramientas">
           {([["mejorar", "Mejorar"], ["recortar", "Recortar y girar"], ["borrar", "Borrar objetos"]] as const).map(([k, t]) => (
-            <button key={k} role="tab" aria-selected={tool === k} disabled={!!running} onClick={() => setTool(k)} className={`rounded-lg px-2 py-1.5 text-sm ${tool === k ? "bg-amber-glow font-semibold text-black" : "text-ink-300 hover:bg-ink-700"}`}>{t}</button>
+            <button key={k} role="tab" aria-selected={tool === k} disabled={!!running} onClick={() => setTool(k)} className="chip-btn">{t}</button>
           ))}
         </div>
         {tool === "recortar" && <div className="min-h-0 flex-1"><CropTool info={info} onReplace={(n) => onReplace(n, tool)} /></div>}
         {tool === "borrar" && <div className="min-h-0 flex-1"><EraseTool info={info} enabled={!!features.inpainting} onReplace={(n) => onReplace(n, tool)} /></div>}
-        {tool === "mejorar" && <div className="relative h-[58vh] min-h-0 lg:h-auto lg:flex-1">
+        {tool === "mejorar" && <div className="relative h-[56vh] min-h-[320px] lg:h-auto lg:flex-1">
           {cur ? <Compare before={api.imageUrl(info.id)} after={api.jobUrl(cur.job.id)} />
             : <div className="checker flex h-full items-center justify-center rounded-xl border border-ink-700"><img src={api.imageUrl(info.id)} alt="Fotografía original" className="max-h-full max-w-full object-contain" /></div>}
           {running && (
@@ -126,17 +126,25 @@ export default function Editor({ info, system, initialTool, onBack, onReplace, o
         {error && <p role="alert" className="rounded-lg border border-red-500/40 bg-red-500/10 p-3 text-sm text-red-200">{error}</p>}
       </div>
 
-      {tool === "mejorar" && <aside className="card flex flex-col gap-5 p-4 lg:max-h-full lg:overflow-y-auto" aria-label="Panel de herramientas">
-        <section aria-labelledby="diag">
-          <h2 id="diag" className="mb-2 text-sm font-semibold">Diagnóstico</h2>
+      {tool === "mejorar" && (
+        <div className="action-bar fixed inset-x-0 bottom-0 lg:hidden">
+          <button className="btn btn-lg" disabled={!!running || !!planError} onClick={run}>{running ? `Procesando… ${Math.round((running.progress || 0) * 100)} %` : cur ? "Aplicar de nuevo" : "Mejorar imagen"}</button>
+        </div>
+      )}
+      {tool === "mejorar" && <aside className="card flex flex-col gap-4 p-4 lg:max-h-full lg:overflow-y-auto" aria-label="Panel de herramientas">
+        <section aria-labelledby="diag" className="space-y-2">
+          <h2 id="diag" className="text-sm font-semibold">Diagnóstico</h2>
           <div className="flex flex-wrap gap-1.5 text-xs">
             {[CHIP[an.resolution], `Desenfoque ${an.blur}`, `Ruido ${an.noise}`, `Compresión ${an.compression}`, `Exposición ${an.exposure}`, `${an.faces} rostro(s)`].map((c) => <span key={c} className="rounded-full bg-ink-800 px-2.5 py-1">{c}</span>)}
           </div>
-          <ul className="label mt-2 list-disc space-y-1 pl-4">{an.recommendations.map((r) => <li key={r}>{r}</li>)}</ul>
+          <details className="text-sm">
+            <summary className="cursor-pointer py-1 text-amber-glow">Ver recomendaciones</summary>
+            <ul className="label mt-1 list-disc space-y-1 pl-4">{an.recommendations.map((r) => <li key={r}>{r}</li>)}</ul>
+          </details>
         </section>
 
         <Controls s={settings} set={setSettings} plan={plan} planError={planError} features={features} image={info} />
-        <button className="btn" disabled={!!running || !!planError} onClick={run}>{running ? "Procesando…" : cur ? "Aplicar de nuevo" : "Mejorar imagen"}</button>
+        <button className="btn btn-lg hidden lg:inline-flex" disabled={!!running || !!planError} onClick={run}>{running ? "Procesando…" : cur ? "Aplicar de nuevo" : "Mejorar imagen"}</button>
 
         <section className="space-y-3 border-t border-ink-700 pt-4" aria-labelledby="exp">
           <h2 id="exp" className="text-sm font-semibold">Exportar</h2>

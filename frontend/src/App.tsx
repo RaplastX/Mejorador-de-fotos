@@ -29,9 +29,12 @@ export default function App() {
 
   return (
     <div className="flex h-full flex-col">
-      <header className="flex items-center justify-between border-b border-ink-800 px-5 py-3">
-        <button onClick={home} className="flex items-center gap-2 text-lg font-semibold"><span className="inline-block h-3 w-3 rounded-full bg-amber-glow" aria-hidden />{APP_NAME}</button>
-        <nav className="flex items-center gap-3 text-sm text-ink-300"><span title="Las fotos no salen de este equipo">🔒 Local</span><button className="btn-ghost" onClick={() => setView({ name: "settings" })}>Ajustes</button></nav>
+      <header className="sticky top-0 z-30 flex items-center justify-between border-b border-ink-800 bg-ink-950/85 px-4 py-3 backdrop-blur sm:px-6">
+        <button onClick={home} className="flex items-center gap-2.5 font-display text-lg font-semibold" aria-label={`${APP_NAME}: ir al inicio`}>
+          <svg viewBox="0 0 32 32" width="26" height="26" aria-hidden><circle cx="16" cy="16" r="13" fill="none" stroke="#f2b45a" strokeWidth="2.4" /><circle cx="16" cy="16" r="5.2" fill="#f2b45a" /><path d="M16 3v8M27.3 9.5 20.4 13.5M27.3 22.5l-6.9-4M16 29v-8M4.7 22.5l6.9-4M4.7 9.5l6.9 4" stroke="#f2b45a" strokeWidth="1.6" opacity=".55" /></svg>
+          {APP_NAME}
+        </button>
+        <nav className="flex items-center gap-2 text-sm text-ink-300"><span className="chip max-sm:hidden" title="Las fotos solo se procesan en el motor de esta app">🔒 Privado</span><button className="btn-ghost" onClick={() => setView({ name: "settings" })}>Ajustes</button></nav>
       </header>
       <main className="min-h-0 flex-1 overflow-y-auto">
         {view.name === "home" && <Home onFiles={onFiles} onOpen={onOpen} busy={busy} error={error} />}

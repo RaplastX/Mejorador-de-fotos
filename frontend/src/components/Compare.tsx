@@ -1,9 +1,9 @@
 import { useCallback, useRef, useState } from "react";
 
-interface Props { before: string; after: string; beforeLabel?: string; afterLabel?: string }
+interface Props { before: string; after: string; beforeLabel?: string; afterLabel?: string; minimal?: boolean }
 
 /** Comparador antes/después con divisor deslizante, zoom (rueda / botones) y desplazamiento (arrastrar con zoom). */
-export default function Compare({ before, after, beforeLabel = "Original", afterLabel = "Mejorada" }: Props) {
+export default function Compare({ before, after, beforeLabel = "Original", afterLabel = "Mejorada", minimal = false }: Props) {
   const [split, setSplit] = useState(50);
   const [zoom, setZoom] = useState(1);
   const [pan, setPan] = useState({ x: 0, y: 0 });
@@ -24,7 +24,7 @@ export default function Compare({ before, after, beforeLabel = "Original", after
     <div className="relative flex h-full w-full flex-col">
       <div
         ref={box}
-        className="checker relative flex-1 select-none overflow-hidden rounded-xl border border-ink-700 touch-none"
+        className={`${minimal ? "bg-ink-900" : "checker"} relative flex-1 select-none overflow-hidden rounded-2xl border border-ink-700 touch-none`}
         onWheel={(e) => changeZoom(zoom * (e.deltaY < 0 ? 1.15 : 1 / 1.15))}
         onPointerDown={(e) => {
           (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
@@ -48,7 +48,7 @@ export default function Compare({ before, after, beforeLabel = "Original", after
           <div className="absolute top-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full bg-white p-2 text-xs text-black shadow-lg">⟷</div>
         </div>
       </div>
-      <div className="mt-2 flex items-center gap-3 text-sm text-ink-300">
+      {!minimal && <div className="mt-2 flex items-center gap-3 text-sm text-ink-300">
         <label className="flex flex-1 items-center gap-2">
           <span className="whitespace-nowrap">Divisor</span>
           <input type="range" min={0} max={100} value={Math.round(split)} onChange={(e) => setSplit(+e.target.value)} aria-label="Posición del divisor antes/después" />
@@ -58,7 +58,7 @@ export default function Compare({ before, after, beforeLabel = "Original", after
           <button className="btn-ghost w-16" onClick={() => changeZoom(1)} aria-label="Restablecer zoom">{Math.round(zoom * 100)}%</button>
           <button className="btn-ghost" onClick={() => changeZoom(zoom * 1.5)} aria-label="Acercar">+</button>
         </div>
-      </div>
+      </div>}
     </div>
   );
 }

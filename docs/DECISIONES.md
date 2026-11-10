@@ -25,3 +25,8 @@
 - **Colorización conserva la luminancia original** a resolución completa; el modelo solo aporta los canales de color.
 - **Presets en `localStorage`** (por navegador/dispositivo), sin base de datos.
 - Un solo script descarga todos los modelos; las funciones cuyo modelo falta se muestran desactivadas con la instrucción para instalarlo.
+
+## Rediseño móvil (v0.3.1) y alojamiento
+- **Mobile-first**: portada con demo real, presets deslizables, ajustes en secciones plegables y botón principal fijo abajo. Verificado con capturas en iPhone 13 emulado y escritorio.
+- **Bug de capas CSS**: las clases propias (`.btn`, `.chip`…) estaban fuera de `@layer` y anulaban utilidades de Tailwind como `hidden`; ahora van en `@layer components`.
+- **Alojamiento**: HF Spaces Docker exige PRO (probado, 402). Se descartó el túnel desde el entorno de desarrollo (bloqueado) y el Space público sin confirmación expresa del usuario. Opciones abiertas: Colab (sin probar), host propio con Docker, o cómputo en el navegador (ONNX Runtime Web; no implementado).

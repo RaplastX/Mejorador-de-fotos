@@ -29,6 +29,10 @@ Aplicación **local y privada** de mejora fotográfica con IA para uso personal 
 | Corrección de perspectiva, colorización por zonas, selección con lazo | ⏳ No implementado |
 | Empaquetado como instalador (Tauri) | ⏳ Fase 5 |
 
+## Alojar en internet (para usar sin PC)
+- **Hugging Face Spaces: ya no es gratis para esto.** Probado 2026-11-10: crear un Space Docker en `cpu-basic` devuelve «requires a PRO subscription» (HTTP 402). Por eso no hay Space publicado. `Dockerfile` y `scripts/publicar_space.py` (privado por defecto, `--publico` explícito) quedan listos por si se paga PRO o se usa otro host con Docker. La imagen nunca se construyó: no hay demonio Docker en el entorno de desarrollo.
+- Cualquier host con Docker: `docker build -t luma .` y `docker run -p 7860:7860 -e LUMA_TOKEN=<clave de 32+ caracteres> luma`; el enlace de emparejamiento es `https://<host>/pair?t=<clave>`.
+
 ## Solo con el móvil (sin PC): Google Colab
 Ver **`docs/GUIA_MOVIL_COLAB.md`** y `notebooks/luma_colab.ipynb` (GPU gratuita con tu cuenta de Google; **sin probar de extremo a extremo**, con cuotas de Google).
 
