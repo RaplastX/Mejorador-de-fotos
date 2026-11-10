@@ -100,7 +100,8 @@ export const local = {
     (job as unknown as { _t0: number })._t0 = performance.now();
     jobs.set(job.id, { job });
     const copy = img.rgba.slice(); // el worker recibe su propia copia (se transfiere)
-    const msg: RunMsg = { type: "run", id: job.id, rgba: copy.buffer, w: img.w, h: img.h, o: { denoise: o.denoise ?? dn, color: o.color ?? col, sharpen: o.sharpen ?? shp, shadows: o.shadows ?? 0, highlights: o.highlights ?? 0, factor: plan.factor, tw: plan.width, th: plan.height } };
+    const base = new URL(import.meta.env.BASE_URL, document.baseURI).href;
+    const msg: RunMsg = { type: "run", id: job.id, rgba: copy.buffer, w: img.w, h: img.h, base, o: { denoise: o.denoise ?? dn, color: o.color ?? col, sharpen: o.sharpen ?? shp, shadows: o.shadows ?? 0, highlights: o.highlights ?? 0, factor: plan.factor, tw: plan.width, th: plan.height } };
     getWorker().postMessage(msg, [copy.buffer]);
     return { ...job };
   },

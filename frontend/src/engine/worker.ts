@@ -1,10 +1,10 @@
 /// <reference lib="webworker" />
 /** Web Worker: ejecuta el pipeline de mejora (operaciones clásicas + superresolución ONNX por mosaicos). */
-import * as ort from "onnxruntime-web/webgpu";
+import type * as OrtT from "onnxruntime-web";
 import { autoColor, denoise, fromRGBA, shadowsHighlights, sharpenRGBA, toRGBA } from "./imageops";
 
 export interface RunMsg {
-  type: "run"; id: string; rgba: ArrayBuffer; w: number; h: number;
+  type: "run"; id: string; rgba: ArrayBuffer; w: number; h: number; base: string;
   o: { denoise: number; color: number; sharpen: number; shadows: number; highlights: number; factor: number; tw: number; th: number };
 }
 export type Out =
@@ -18,17 +18,20 @@ const ctx = self as unknown as DedicatedWorkerGlobalScope;
 const post = (m: Out, tr: Transferable[] = []) => ctx.postMessage(m, tr);
 const cancelled = new Set<string>();
 const TILE = 128, PAD = 12;
-let session: ort.InferenceSession | null = null;
+let ort: typeof OrtT;
+let session: OrtT.InferenceSession | null = null;
 
-async function getSession(): Promise<ort.InferenceSession> {
+async function getSession(base: string): Promise<OrtT.InferenceSession> {
   if (session) return session;
+  // VITE_ORT=wasm: variante solo-WASM (11,9 MB, para entornos con límite de tamaño); por defecto, con WebGPU.
+  ort = import.meta.env.VITE_ORT === "wasm" ? await import("onnxruntime-web/wasm") : await import("onnxruntime-web/webgpu");
   const threads = ctx.crossOriginIsolated ? Math.min(4, navigator.hardwareConcurrency || 2) : 1;
-  ort.env.wasm.wasmPaths = "/ort/";
+  ort.env.wasm.wasmPaths = base + "ort/";
   ort.env.wasm.numThreads = threads;
-  const url = "/models/realesr-general-x4v3.onnx";
+  const url = base + "models/" + (import.meta.env.VITE_MODEL_FILE || "realesr-general-x4v3.onnx"); // el artefacto no sirve .onnx: allí se publica con otra extensión
   let provider = "wasm";
   try {
-    if ("gpu" in navigator && (await (navigator as unknown as { gpu: { requestAdapter(): Promise<unknown> } }).gpu.requestAdapter())) {
+    if (import.meta.env.VITE_ORT !== "wasm" && "gpu" in navigator && (await (navigator as unknown as { gpu: { requestAdapter(): Promise<unknown> } }).gpu.requestAdapter())) {
       session = await ort.InferenceSession.create(url, { executionProviders: ["webgpu"], graphOptimizationLevel: "all" });
       provider = "webgpu";
     }
@@ -38,8 +41,8 @@ async function getSession(): Promise<ort.InferenceSession> {
   return session;
 }
 
-async function upscale4(img: { w: number; h: number; d: Float32Array }, id: string, report: (p: number) => void): Promise<Uint8ClampedArray> {
-  const s = await getSession(), { w, h, d } = img, S = 4;
+async function upscale4(img: { w: number; h: number; d: Float32Array }, id: string, base: string, report: (p: number) => void): Promise<Uint8ClampedArray> {
+  const s = await getSession(base), { w, h, d } = img, S = 4;
   const out = new Uint8ClampedArray(w * S * h * S * 4);
   for (let i = 3; i < out.length; i += 4) out[i] = 255;
   const tilesX = Math.ceil(w / TILE), tilesY = Math.ceil(h / TILE);
@@ -92,7 +95,7 @@ async function run(m: RunMsg): Promise<void> {
     let out: Uint8ClampedArray, ow = w, oh = h, shp = o.sharpen;
     if (o.factor > 1) {
       report(0.15, "Superresolución con IA (la primera vez descarga el modelo)");
-      out = await upscale4(img, id, (p) => report(0.15 + 0.75 * p, "Superresolución con IA")); ow = w * 4; oh = h * 4; check();
+      out = await upscale4(img, id, m.base, (p) => report(0.15 + 0.75 * p, "Superresolución con IA")); ow = w * 4; oh = h * 4; check();
       if (ow !== o.tw || oh !== o.th) { report(0.92, "Ajustando tamaño final"); out = await resizeRGBA(out, ow, oh, o.tw, o.th); ow = o.tw; oh = o.th; }
       shp *= 0.5;
     } else out = toRGBA(img);

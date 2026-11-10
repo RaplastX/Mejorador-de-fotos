@@ -39,3 +39,15 @@
 | Publicación en Hugging Face Space | ❌ no posible gratis (402 PRO); no se creó nada |
 | Túnel Cloudflare / Colab | ⚠ sin probar (entorno de desarrollo lo bloquea) |
 | Imagen Docker | ⚠ nunca construida (sin demonio Docker) |
+
+## Motor en el navegador (v0.4.0)
+| Prueba | Resultado |
+|---|---|
+| ONNX vs PyTorch (3 tamaños dinámicos) | ✅ diferencia máxima 1e-6 |
+| Servidor estático sin API → la app detecta y usa el motor del navegador | ✅ |
+| Subir foto, diagnóstico, 2×, exportar JPEG 512×512 sin EXIF | ✅ 7,5–7,9 s (WASM 1 hilo, CPU de servidor) |
+| Resultado del navegador vs servidor (misma foto, mismos ajustes) | ✅ diferencia media 0,019; visualmente igual |
+| Variante del artefacto (solo WASM, servida desde una subcarpeta) | ✅ igual resultado |
+| Publicación como Artifact privado de Claude | ⚠ publicado, **sin verificar dentro del visor de Claude** (WASM, workers y el nombre `.onnx.wasm` del modelo dependen de la sandbox) |
+| WebGPU, hilos WASM, móvil físico, Safari | ❌ no probado |
+| Cloudflare Pages | ❌ no publicado (sin autorización); un intento fallido de `wrangler` modificó el repo y se revirtió; no creó nada en la cuenta (verificado en lectura) |

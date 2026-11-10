@@ -29,6 +29,15 @@ Aplicación **local y privada** de mejora fotográfica con IA para uso personal 
 | Corrección de perspectiva, colorización por zonas, selección con lazo | ⏳ No implementado |
 | Empaquetado como instalador (Tauri) | ⏳ Fase 5 |
 
+## Versión que corre en el navegador (sin servidor)
+La misma interfaz funciona **sin servidor**: si no encuentra la API, usa un motor propio en el navegador (ONNX Runtime Web, con WebGPU si el dispositivo lo permite y WASM si no). Las fotos no salen del dispositivo.
+- Incluye: superresolución 2×/4×/1080p/2K/4K, ruido, color, sombras/luces, nitidez, recorte, giro y enderezado, lotes, presets y versiones.
+- **No incluye** (modelos de cientos de MB): rostros, piel, rayones, colorización, borrar objetos, ojos rojos, EXIF, HEIC/TIFF. Se desactivan con aviso.
+- Calidad: resultado casi idéntico al del servidor (diferencia media 0,019 en una prueba). Rendimiento medido: 256→512 px en 7,5–7,9 s con WASM de un hilo en CPU de servidor; **WebGPU y móvil real no medidos**. Fotos de más de 1 MP tardan mucho sin GPU; el límite es 4 MP de entrada para ampliar y 12 MP de salida.
+- Compilar: `cd frontend && npm ci && npm run build` (sitio estático en `frontend/dist`; copia el runtime de ONNX desde `node_modules`). Para el artefacto de Claude: `npm run build:artifact` (variante solo-WASM, 17 MB).
+- Regenerar el modelo: `python scripts/exportar_onnx.py` (verifica contra PyTorch).
+- **Cloudflare Pages: no publicado.** Hace falta tu autorización expresa porque crea un sitio público. Pasos manuales desde el móvil: panel de Cloudflare → Workers y Pages → Crear → Pages → Conectar con Git → este repositorio y rama; comando de compilación `cd frontend && npm ci && npm run build`; directorio de salida `frontend/dist`. Las cabeceras de `frontend/public/_headers` activan hilos WASM donde el navegador los admite. No uses `wrangler pages project create` con wrangler 4.153: se delega en Workers y modifica el proyecto.
+
 ## Alojar en internet (para usar sin PC)
 - **Hugging Face Spaces: ya no es gratis para esto.** Probado 2026-11-10: crear un Space Docker en `cpu-basic` devuelve «requires a PRO subscription» (HTTP 402). Por eso no hay Space publicado. `Dockerfile` y `scripts/publicar_space.py` (privado por defecto, `--publico` explícito) quedan listos por si se paga PRO o se usa otro host con Docker. La imagen nunca se construyó: no hay demonio Docker en el entorno de desarrollo.
 - Cualquier host con Docker: `docker build -t luma .` y `docker run -p 7860:7860 -e LUMA_TOKEN=<clave de 32+ caracteres> luma`; el enlace de emparejamiento es `https://<host>/pair?t=<clave>`.

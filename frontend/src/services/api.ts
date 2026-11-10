@@ -83,8 +83,11 @@ export async function detectBackend(): Promise<"servidor" | "navegador"> {
   try {
     const ctl = new AbortController(); const t = setTimeout(() => ctl.abort(), 4000);
     const r = await fetch("/api/system", { signal: ctl.signal }); clearTimeout(t);
-    if (r.ok && (r.headers.get("content-type") ?? "").includes("application/json")) return "servidor";
-    if (r.status === 401) return "servidor"; // servidor protegido: lo gestiona la pantalla de emparejamiento
+    if ((r.headers.get("content-type") ?? "").includes("application/json")) {
+      const j = await r.json().catch(() => null) as { app?: string; error?: string; message?: string } | null;
+      if (r.ok && j?.app) return "servidor"; // firma de mi API
+      if (r.status === 401 && j?.error === "unauthorized" && /emparejad/.test(j.message ?? "")) return "servidor"; // servidor protegido
+    }
   } catch { /* sin servidor */ }
   const { local } = await import("../engine/local");
   Object.assign(api, local);

@@ -6,8 +6,8 @@ interface Props { onFiles: (files: File[]) => void; onOpen: (id: string) => void
 type Recent = Awaited<ReturnType<typeof api.list>>;
 
 const DEMOS = [
-  { id: "retrato", title: "Retrato de baja resolución", note: "256 px muy comprimida → 1024 px, con restauración facial al 60 %", before: "/samples/retrato_antes.jpg", after: "/samples/retrato_despues.jpg", la: "Ampliación estándar", lb: "Luma" },
-  { id: "antigua", title: "Foto antigua", note: "Sin rayones, con color generado por IA y rostro restaurado", before: "/samples/antigua_antes.jpg", after: "/samples/antigua_despues.jpg", la: "Antes", lb: "Después" },
+  { id: "retrato", title: "Retrato de baja resolución", note: "256 px muy comprimida → 1024 px, con restauración facial al 60 %", before: `${import.meta.env.BASE_URL}samples/retrato_antes.jpg`, after: `${import.meta.env.BASE_URL}samples/retrato_despues.jpg`, la: "Ampliación estándar", lb: "Luma" },
+  { id: "antigua", title: "Foto antigua", note: "Sin rayones, con color generado por IA y rostro restaurado", before: `${import.meta.env.BASE_URL}samples/antigua_antes.jpg`, after: `${import.meta.env.BASE_URL}samples/antigua_despues.jpg`, la: "Antes", lb: "Después" },
 ];
 
 const FEATURES: { t: string; d: string; icon: string }[] = [

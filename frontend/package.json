@@ -1,7 +1,7 @@
 {
   "name": "luma-enhance-frontend",
   "private": true,
-  "version": "0.3.1",
+  "version": "0.4.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -10,7 +10,8 @@
     "lint": "eslint src",
     "preview": "vite preview",
     "postbuild": "node -e \"const f=require('fs');for(const n of f.readdirSync('dist/assets'))if(/^ort-wasm.*\\\\.wasm$/.test(n))f.unlinkSync('dist/assets/'+n)\"",
-    "prebuild": "node -e \"const f=require('fs'),s='node_modules/onnxruntime-web/dist/';f.mkdirSync('public/ort',{recursive:true});for(const n of ['ort-wasm-simd-threaded.asyncify.mjs','ort-wasm-simd-threaded.asyncify.wasm'])f.copyFileSync(s+n,'public/ort/'+n)\""
+    "prebuild": "node -e \"const f=require('fs'),s='node_modules/onnxruntime-web/dist/';f.mkdirSync('public/ort',{recursive:true});for(const n of ['ort-wasm-simd-threaded.asyncify.mjs','ort-wasm-simd-threaded.asyncify.wasm','ort-wasm-simd-threaded.mjs','ort-wasm-simd-threaded.wasm'])f.copyFileSync(s+n,'public/ort/'+n)\"",
+    "build:artifact": "npm run prebuild && tsc -b && VITE_ORT=wasm VITE_MODEL_FILE=realesr-general-x4v3.onnx.wasm vite build --base=./ --outDir dist-artifact && node -e \"const f=require('fs');for(const n of f.readdirSync('dist-artifact/assets'))if(/^ort-wasm.*\\\\.wasm$/.test(n))f.unlinkSync('dist-artifact/assets/'+n)\""
   },
   "dependencies": {
     "onnxruntime-web": "1.23.2",

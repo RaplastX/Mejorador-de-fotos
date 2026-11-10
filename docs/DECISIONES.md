@@ -30,3 +30,10 @@
 - **Mobile-first**: portada con demo real, presets deslizables, ajustes en secciones plegables y botón principal fijo abajo. Verificado con capturas en iPhone 13 emulado y escritorio.
 - **Bug de capas CSS**: las clases propias (`.btn`, `.chip`…) estaban fuera de `@layer` y anulaban utilidades de Tailwind como `hidden`; ahora van en `@layer components`.
 - **Alojamiento**: HF Spaces Docker exige PRO (probado, 402). Se descartó el túnel desde el entorno de desarrollo (bloqueado) y el Space público sin confirmación expresa del usuario. Opciones abiertas: Colab (sin probar), host propio con Docker, o cómputo en el navegador (ONNX Runtime Web; no implementado).
+
+## Motor en el navegador (v0.4.0)
+- **Mismo frontend, dos motores**: `detectBackend()` usa la API si responde con la firma de la app; si no, `engine/local.ts` implementa la misma interfaz. Así un solo despliegue estático sirve en cualquier sitio.
+- **Operaciones clásicas reimplementadas en TS** (ruido bilateral, color sin CLAHE, sombras/luces, nitidez anti-halo): equivalentes simplificados, no idénticos, a los de OpenCV.
+- **Superresolución con ONNX por mosaicos de 128 px (solape 12)** en un Web Worker; salida en 8 bits para no multiplicar la memoria del móvil.
+- **Dos variantes de ONNX Runtime**: WebGPU (runtime asyncify de 25,5 MB, justo bajo el límite de 25 MiB de Pages) y solo-WASM (11,9 MB) para el artefacto, que limita los binarios a 15 MB. Los artefactos tampoco sirven `.onnx`: se publica como `.onnx.wasm`.
+- **No se publicó en Cloudflare/Hugging Face sin autorización expresa** (el sistema bloqueó crear superficies públicas); HF Docker exige PRO.
