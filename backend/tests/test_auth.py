@@ -51,3 +51,19 @@ def test_tunnel_launcher_helpers_and_loopback_bind(monkeypatch):
     assert lt.find_tunnel_url(line) == "https://calm-river-demo-1234.trycloudflare.com"
     assert lt.find_tunnel_url("sin url aquí") is None
     assert lt.pairing_link("https://x.trycloudflare.com/", "TOK") == "https://x.trycloudflare.com/pair?t=TOK"
+
+
+def test_fixed_token_from_env_and_secure_cookie_under_https(monkeypatch, tmp_path):
+    monkeypatch.setenv("LUMA_TOKEN", "x" * 40)
+    monkeypatch.setattr(settings, "remote", True)
+    monkeypatch.setattr(settings, "data_dir", tmp_path)
+    assert auth.get_token() == "x" * 40 and not settings.token_file.exists()  # no se escribe en disco
+    with TestClient(create_app(), base_url="https://demo.hf.space") as c:
+        r = c.get("/pair?t=" + "x" * 40, follow_redirects=False)
+        assert r.status_code == 303 and "secure" in r.headers["set-cookie"].lower()
+        assert c.get("/api/system").status_code == 200
+    monkeypatch.setenv("LUMA_TOKEN", "corto")
+    import pytest
+
+    with pytest.raises(RuntimeError):
+        auth.get_token()

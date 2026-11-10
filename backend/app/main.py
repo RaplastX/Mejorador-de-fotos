@@ -37,7 +37,7 @@ def create_app() -> FastAPI:
             if path == "/pair":
                 if auth.token_ok(request.query_params.get("t")):
                     resp = RedirectResponse("/", status_code=303)
-                    resp.set_cookie(auth.COOKIE, auth.get_token(), httponly=True, samesite="strict", max_age=60 * 60 * 24 * 365)
+                    resp.set_cookie(auth.COOKIE, auth.get_token(), httponly=True, samesite="strict", secure=request.url.scheme == "https", max_age=60 * 60 * 24 * 365)
                     return resp
                 return JSONResponse({"error": "unauthorized", "message": "Enlace de emparejamiento no válido."}, status_code=401)
             if auth.is_public(path) or auth.token_ok(request.cookies.get(auth.COOKIE)):

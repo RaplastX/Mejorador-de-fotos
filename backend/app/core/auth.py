@@ -16,6 +16,11 @@ PUBLIC_PATHS = ("/pair", "/manifest.webmanifest", "/sw.js", "/icons/", "/favicon
 
 
 def get_token() -> str:
+    env = os.environ.get("LUMA_TOKEN", "").strip()  # alojamiento (p. ej. Hugging Face Space): clave fija como secreto
+    if env:
+        if len(env) < 32:
+            raise RuntimeError("LUMA_TOKEN debe tener al menos 32 caracteres.")
+        return env
     f = settings.token_file
     if f.is_file():
         return f.read_text().strip()
